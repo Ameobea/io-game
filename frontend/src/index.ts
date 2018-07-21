@@ -2,8 +2,13 @@ import { Socket } from 'phoenix-socket';
 
 const wasm = import('../game-engine/build/game_engine');
 
-const initEngine = engine => {
+wasm.then(engine => {
   engine.greet('Rendered from Rust via WebAssembly!');
+  engine.set('key', 'val');
+  console.log(engine.get('key'));
+
+  const msg = new Uint8Array([0, 1, 2, 3, 4]);
+  engine.handle_message(msg);
 
   ////////
 
@@ -17,10 +22,6 @@ const initEngine = engine => {
   const join = game.join();
   console.log(join);
   join
-    .receive('ok', function() {
-      console.log('Connected to lobby!');
-    })
-    .receive('error', reasons => console.error('create failed', reasons));
-};
-
-wasm.then(initEngine);
+    .receive('ok', () => console.log('Connected to lobby!'))
+    .receive('error', (reasons: any) => console.error('create failed', reasons));
+});
