@@ -1,0 +1,11 @@
+[package]
+authors = ["Casey Primozic <me@ameo.link>"]
+name = "game-engine"
+version = "0.1.0"
+
+[dependencies]
+uuid = "0.6.5"
+wasm-bindgen = "0.2"
+
+[lib]
+crate-type = ["cdylib"]
