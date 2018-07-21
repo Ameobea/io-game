@@ -9,20 +9,26 @@ use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-extern {
+extern "C" {
     fn alert(s: &str);
-}
 
-pub struct Message {
-    pub id: Uuid,
-    pub message: String,
+    type HTMLDocument;
+    static document: HTMLDocument;
+    #[wasm_bindgen(method)]
+    fn createElement(this: &HTMLDocument, tagName: &str) -> Element;
+    #[wasm_bindgen(method, getter)]
+    fn body(this: &HTMLDocument) -> Element;
+
+    type Element;
+    #[wasm_bindgen(method, setter = innerHTML)]
+    fn set_inner_html(this: &Element, html: &str);
+    #[wasm_bindgen(method, js_name = appendChild)]
+    fn append_child(this: &Element, other: Element);
 }
 
 #[wasm_bindgen]
-pub fn greet(msg: &Message) {
-    let &Message { name, id } = msg;
-    let mut hm: HashMap<&'static str, &'static str> = HashMap::new();
-    hm.insert("test", "test1").unwrap();
-    hm.insert("test2", "test3").unwrap();
-    alert(&format!("Hello, {} {} {}!", hm.get("test").unwrap(), name, id));
+pub extern "C" fn greet(msg: &str) {
+    let val = document.createElement("h1");
+    val.set_inner_html(msg);
+    document.body().append_child(val);
 }

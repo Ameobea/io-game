@@ -22,3 +22,4 @@ TODO
 
 - Built with Rust and compiled into WebAssembly
 - Using the SDL library to abstract rendering to canvas
+- Uses the Phoenix channels JS client library as a wrapper to connect to the backend and relay data to the WebAssembly code that powers the game.

@@ -1,0 +1,20 @@
+{
+  "name": "io-game-frontend",
+  "version": "0.1.0",
+  "description": "Frontend for the .io WebAssembly game",
+  "main": "index.js",
+  "repository": "https://github.com/Ameobea/dot-io-game/tree/master/frontend",
+  "author": "Casey Primozic <me@ameo.link> + Alex J <Github @dalexj>",
+  "devDependencies": {
+    "webpack": "^4.16.1",
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.4"
+  },
+  "scripts": {
+    "start": "webpack-dev-server",
+    "build": "webpack"
+  },
+  "dependencies": {
+    "phoenix-socket": "^1.2.3"
+  }
+}
