@@ -2,7 +2,7 @@ defmodule BackendWeb.UserSocket do
   use Phoenix.Socket
 
   ## Channels
-  # channel "room:*", BackendWeb.RoomChannel
+  channel "game:first", BackendWeb.GameChannel
 
   ## Transports
   transport :websocket, Phoenix.Transports.WebSocket
