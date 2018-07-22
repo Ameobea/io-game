@@ -3,10 +3,6 @@ import { Socket } from 'phoenix-socket';
 const wasm = import('../game-engine/build/game_engine');
 
 wasm.then(engine => {
-  engine.greet('Rendered from Rust via WebAssembly!');
-  engine.set('key', 'val');
-  console.log(engine.get('key'));
-
   const msg = new Uint8Array([0, 1, 2, 3, 4]);
   engine.handle_message(msg);
 

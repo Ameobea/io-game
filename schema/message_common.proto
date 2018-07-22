@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+message Uuid {
+  fixed64 data_1 = 1;
+  fixed64 data_2 = 2;
+}
+
+enum MovementUpdate {
+  UP = 0;
+  RIGHT = 1;
+  DOWN = 2;
+  LEFT = 3;
+  STOP = 4;
+}

@@ -10,7 +10,7 @@ protobuf-codegen-pure = "2.0.3"
 [dependencies]
 lazy_static = "1.0.2"
 protobuf = "2.0.4"
-uuid = "0.6.5"
+uuid = { version = "0.6.5", features = ["u128"] }
 
 [dependencies.wasm-bindgen]
 git = "https://github.com/rustwasm/wasm-bindgen.git"

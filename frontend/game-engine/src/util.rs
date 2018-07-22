@@ -17,14 +17,14 @@ pub fn debug<T: Debug>(x: T) -> String {
     format!("{:?}", x)
 }
 
-pub fn log<T: Debug>(msg: T) {
-    js_log(&debug(msg))
+pub fn log<T: AsRef<str>>(msg: T) {
+    js_log(msg.as_ref())
 }
 
-pub fn warn<T: Debug>(msg: T) {
-    js_warn(&debug(msg))
+pub fn warn<T: AsRef<str>>(msg: T) {
+    js_warn(msg.as_ref())
 }
 
-pub fn error<T: Debug>(msg: T) {
-    js_error(&debug(msg))
+pub fn error<T: AsRef<str>>(msg: T) {
+    js_error(msg.as_ref())
 }

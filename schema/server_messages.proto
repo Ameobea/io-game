@@ -1,17 +1,6 @@
 syntax = "proto3";
 
-message Uuid {
-  fixed64 data1 = 1;
-  fixed64 data2 = 2;
-}
-
-enum MovementUpdate {
-  UP = 0;
-  RIGHT = 1;
-  DOWN = 2;
-  LEFT = 3;
-  STOP = 4;
-}
+import "message_common.proto";
 
 message StatusUpdate {
   enum Status {
@@ -23,7 +12,7 @@ message StatusUpdate {
   double pos_y = 3;
 }
 
-message GameMessage {
+message ServerMessage {
   Uuid id = 1;
   oneof payload {
     MovementUpdate movement_update = 2;

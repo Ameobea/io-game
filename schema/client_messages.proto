@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "message_common.proto";
+
+message ConnectMessage {
+  string username = 1;
+}
+
+message ClientMessage {
+  Uuid id = 1;
+  oneof payload {
+    ConnectMessage connect = 2;
+    MovementUpdate player_move = 3;
+  }
+}
