@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+message Uuid {
+  fixed64 data1 = 1;
+  fixed64 data2 = 2;
+}
+
+enum MovementUpdate {
+  UP = 0;
+  RIGHT = 1;
+  DOWN = 2;
+  LEFT = 3;
+  STOP = 4;
+}
+
+message StatusUpdate {
+  enum Status {
+    CREATED = 0;
+    DELETED = 1;
+  }
+  Status status = 1;
+  double pos_x = 2;
+  double pos_y = 3;
+}
+
+message GameMessage {
+  Uuid id = 1;
+  oneof payload {
+    MovementUpdate movement_update = 2;
+    StatusUpdate status_update = 3;
+  }
+}

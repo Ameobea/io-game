@@ -1,35 +1,26 @@
-#![feature(use_extern_macros, wasm_import_module)]
+#![feature(use_extern_macros, wasm_custom_section, wasm_import_module)]
 
 #[macro_use]
 extern crate lazy_static;
+extern crate protobuf;
 extern crate uuid;
 extern crate wasm_bindgen;
 
 use std::collections::HashMap;
-use std::fmt::Debug;
 use std::sync::Mutex;
 
-use uuid::Uuid;
 use wasm_bindgen::prelude::*;
+
+pub mod util;
+use self::util::{debug, log};
+pub mod protos;
 
 lazy_static! {
     static ref STATE: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
 }
 
-fn debug<T: Debug>(x: T) -> String {
-    format!("{:?}", x)
-}
-
 #[wasm_bindgen]
 extern "C" {
-    fn alert(s: &str);
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-    #[wasm_bindgen(js_namespace = console, js_name = log)]
-    fn log_u32(a: u32);
-    #[wasm_bindgen(js_namespace = console, js_name = log)]
-    fn log_many(a: &str, b: &str);
-
     type HTMLDocument;
     static document: HTMLDocument;
     #[wasm_bindgen(method)]

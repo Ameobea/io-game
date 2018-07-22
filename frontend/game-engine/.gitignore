@@ -1,2 +1,5 @@
 build/*
 !build/.gitkeep
+src/protos
+!src/protos/README.md
+!src/protos/mod.rs
