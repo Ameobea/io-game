@@ -1,9 +1,9 @@
 defmodule BackendWeb.GameChannel do
-  use Phoenix.channel
+  use Phoenix.Channel
   alias BackendWeb.GameState
 
   def join("game:first", _payload, socket) do
-    send(self, :after_join)
+    send(self(), :after_join)
     {:ok, socket}
   end
 

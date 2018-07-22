@@ -13,7 +13,7 @@ wasm.then(engine => {
   ////////
 
   console.log('Initializing WS connection to game server...');
-  const socket = new Socket('/socket');
+  const socket = new Socket('ws://localhost:4000/socket');
   socket.onError = console.error;
   socket.onConnError = console.error;
   socket.connect();
