@@ -20,4 +20,7 @@ wasm.then(engine => {
   join
     .receive('ok', () => console.log('Connected to lobby!'))
     .receive('error', (reasons: any) => console.error('create failed', reasons));
+  window.alex = () => {
+    game.push('move_up');
+  };
 });
