@@ -19,7 +19,7 @@ defmodule Backend.Mixfile do
   def application do
     [
       mod: {Backend.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :exprotobuf]
     ]
   end
 
@@ -38,7 +38,8 @@ defmodule Backend.Mixfile do
       {:phoenix_live_reload, "~> 1.0", only: :dev},
       {:gettext, "~> 0.11"},
       {:cowboy, "~> 1.0"},
-      {:uuid, "~> 1.1"}
+      {:uuid, "~> 1.1"},
+      {:exprotobuf, "~> 1.2.9"},
     ]
   end
 end
