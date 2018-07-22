@@ -27,6 +27,10 @@ TODO
 
 ### Backend
 
+- Install Elixir with `brew install elixir`
+- Install all deps within `backend` with `mix deps.get`
+- Compile and start server with `mix phx.server`
+
 ### Frontend
 
 - You'll need to install Rust in order to build the frontend. I suggest using [Rustup](https://rustup.rs/).
