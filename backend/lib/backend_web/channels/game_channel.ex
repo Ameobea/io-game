@@ -26,7 +26,7 @@ defmodule BackendWeb.GameChannel do
 
   def handle_in("temp_gen_server_message_1", _data, socket) do
     msg = <<0, 0>> <> Backend.Message.temp_gen_server_message_1
-    push(socket, "temp_gen_server_message_1_res", msg)
+    push(socket, "temp_gen_server_message_1_res", %{msg: msg})
     {:noreply, socket}
   end
 end
