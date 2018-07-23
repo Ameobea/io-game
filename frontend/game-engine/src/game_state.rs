@@ -38,9 +38,21 @@ impl GameState {
 
     pub fn apply_msg(&mut self, entity_id: Uuid, update: &ServerMessageContent) {
         match update {
-            ServerMessageContent::status_update(StatusUpdate { status, .. }) => match status {
+            ServerMessageContent::status_update(StatusUpdate {
+                status,
+                pos_x,
+                pos_y,
+                ..
+            }) => match status {
                 Status::CREATED => {
-                    unimplemented!();
+                    let entity = ::game::BaseEntity::new(*pos_x, *pos_y);
+                    match self.entity_map.insert(entity_id, box entity) {
+                        Some(_) => error(format!(
+                            "While creating an entity, an old entity existed with the id {}!",
+                            entity_id
+                        )),
+                        None => (),
+                    }
                 }
                 Status::DELETED => match self.entity_map.remove(&entity_id) {
                     Some(_) => (),

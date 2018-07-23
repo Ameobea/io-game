@@ -13,6 +13,12 @@ extern "C" {
     fn js_error(s: &str);
 }
 
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = Math)]
+    pub fn random() -> f64;
+}
+
 pub fn debug<T: Debug>(x: T) -> String {
     format!("{:?}", x)
 }
@@ -27,4 +33,8 @@ pub fn warn<T: AsRef<str>>(msg: T) {
 
 pub fn error<T: AsRef<str>>(msg: T) {
     js_error(msg.as_ref())
+}
+
+pub fn math_random() -> f64 {
+    random()
 }

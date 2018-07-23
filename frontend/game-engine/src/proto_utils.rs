@@ -1,6 +1,6 @@
 use std::mem;
 
-use protobuf::parse_from_bytes;
+use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
 
 use protos::message_common::Uuid as ProtoUuid;
@@ -35,6 +35,17 @@ impl Into<Uuid> for ProtoUuid {
     }
 }
 
+impl Into<ProtoUuid> for Uuid {
+    fn into(self: Uuid) -> ProtoUuid {
+        let (data_1, data_2): (u64, u64) = unsafe { mem::transmute(self) };
+        let mut id = ProtoUuid::new();
+        id.set_data_1(data_1);
+        id.set_data_2(data_2);
+
+        id
+    }
+}
+
 pub fn parse_server_message(bytes: &[u8]) -> Option<InnerServerMessage> {
     let msg: ServerMessage = match parse_from_bytes(bytes) {
         Ok(msg) => msg,
@@ -45,4 +56,14 @@ pub fn parse_server_message(bytes: &[u8]) -> Option<InnerServerMessage> {
     };
 
     msg.into()
+}
+
+pub fn msg_to_bytes<M: Message>(msg: M) -> Vec<u8> {
+    msg.write_to_bytes().unwrap_or_else(|err| {
+        error(format!(
+            "Error while writing created `ServerMessage` to bytes: {:?}",
+            err
+        ));
+        panic!()
+    })
 }

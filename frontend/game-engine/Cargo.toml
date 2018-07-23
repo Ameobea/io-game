@@ -1,7 +1,7 @@
 [package]
 authors = ["Casey Primozic <me@ameo.link>"]
 name = "game-engine"
-uild = "build.rs"
+build = "build.rs"
 version = "0.1.0"
 
 [build-dependencies]
@@ -9,8 +9,13 @@ protobuf-codegen-pure = "2.0.3"
 
 [dependencies]
 lazy_static = "1.0.2"
+palette = "0.4.0"
 protobuf = "2.0.4"
-uuid = { version = "0.6.5", features = ["u128"] }
+rand = { version="0.4.2", features=["i128_support"]}
+
+[dependencies.uuid]
+features = ["u128"]
+version = "0.6.5"
 
 [dependencies.wasm-bindgen]
 git = "https://github.com/rustwasm/wasm-bindgen.git"

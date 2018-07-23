@@ -1,10 +1,29 @@
 import { Socket } from 'phoenix-socket';
 
-const wasm = import('../game-engine/build/game_engine');
+const wasm = import('./game_engine');
+import { clearCanvas } from './renderMethods';
 
-wasm.then(engine => {
-  const msg = new Uint8Array([0, 1, 2, 3, 4]);
-  engine.handle_message(msg);
+const timer = timeMs => new Promise(f => setTimeout(f, timeMs));
+
+wasm.then(async engine => {
+  const tick = () => {
+    clearCanvas();
+    engine.tick();
+    requestAnimationFrame(tick);
+  };
+
+  tick();
+  console.log('Tick hook set.');
+
+  await timer(1500);
+  const msg1 = engine.temp_gen_server_message_1();
+  console.log('Sending message to generate entity...');
+  engine.handle_message(msg1);
+
+  await timer(2500);
+  const msg2 = engine.temp_gen_server_message_2();
+  console.log('Sending message to start moving is right...');
+  engine.handle_message(msg2);
 
   ////////
 
@@ -20,7 +39,8 @@ wasm.then(engine => {
   join
     .receive('ok', () => console.log('Connected to lobby!'))
     .receive('error', (reasons: any) => console.error('create failed', reasons));
-  window.alex = () => {
+
+  (window as any).alex = () => {
     game.push('move_up');
   };
 });

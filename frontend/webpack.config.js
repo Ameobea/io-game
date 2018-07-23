@@ -18,16 +18,22 @@ module.exports = {
         use: 'ts-loader',
         exclude: /node_modules/,
       },
+      {
+        test: /\.hbs$/,
+        use: 'handlebars-loader',
+      },
     ],
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.wasm'],
+    modules: [path.resolve('./node_modules'), path.resolve('.')],
   },
   plugins: [
     new HtmlWebpackPlugin({
       alwaysWriteToDisk: true,
       title: '.io Game',
       minify: true,
+      template: 'index.hbs',
     }),
     new HtmlWebpackHarddiskPlugin(),
   ],

@@ -1,3 +1,4 @@
 target/
 node_modules/
 dist/
+src/game_engine*
