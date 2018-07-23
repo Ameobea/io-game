@@ -12,7 +12,7 @@ use protos::server_messages::{
     CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, StatusUpdate,
     StatusUpdate_SimpleEvent as SimpleEvent, StatusUpdate_oneof_payload as Status,
 };
-use util::{error, warn};
+use util::{error, log, warn};
 
 pub struct State(pub Mutex<GameState>);
 
@@ -40,6 +40,7 @@ impl GameState {
     }
 
     pub fn apply_msg(&mut self, entity_id: Uuid, update: &ServerMessageContent) {
+        log(format!("Applying message with id {}", entity_id));
         match update {
             ServerMessageContent::status_update(StatusUpdate { payload, .. }) => match payload {
                 Some(Status::creation_event(CreationEvent {
@@ -95,6 +96,7 @@ impl GameState {
             EntityType::player(PlayerEntity {
                 direction, size, ..
             }) => {
+                log("Creating entity...");
                 let entity = ::game::BaseEntity::new(pos_x, pos_y, *direction, *size as u16);
                 match self.entity_map.insert(entity_id, box entity) {
                     Some(_) => error(format!(

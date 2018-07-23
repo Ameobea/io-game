@@ -14,9 +14,6 @@ extern crate rand;
 extern crate uuid;
 extern crate wasm_bindgen;
 
-use std::u32;
-
-use protobuf::Message;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
@@ -34,7 +31,7 @@ use self::protos::server_messages::{
     CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, ServerMessage,
     StatusUpdate, StatusUpdate_oneof_payload as Status,
 };
-use util::{debug, error, log};
+use util::{error, log};
 
 #[wasm_bindgen(module = "./renderMethods")]
 extern "C" {
@@ -100,4 +97,29 @@ pub fn temp_gen_server_message_2() -> Vec<u8> {
 #[wasm_bindgen]
 pub fn tick() {
     state().tick()
+}
+
+#[wasm_bindgen]
+pub fn handle_mouse_down(x: u16, y: u16) {
+    log(format!("MOUSE DOWN {}, {}", x, y));
+}
+
+#[wasm_bindgen]
+pub fn handle_mouse_move(x: u16, y: u16) {
+    log(format!("MOUSE MOVE {}, {}", x, y));
+}
+
+#[wasm_bindgen]
+pub fn handle_mouse_up(x: u16, y: u16) {
+    log(format!("MOUSE UP {}, {}", x, y))
+}
+
+#[wasm_bindgen]
+pub fn handle_key_down(code: usize) {
+    log(format!("KEY DOWN {}", code))
+}
+
+#[wasm_bindgen]
+pub fn handle_key_up(code: usize) {
+    log(format!("KE YUP {}", code));
 }

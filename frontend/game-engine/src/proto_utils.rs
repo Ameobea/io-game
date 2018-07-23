@@ -6,7 +6,7 @@ use uuid::Uuid;
 use protos::message_common::Uuid as ProtoUuid;
 use protos::server_messages::ServerMessage;
 pub use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
-use util::error;
+use util::{error, log};
 
 pub struct InnerServerMessage {
     pub id: Uuid,
@@ -47,9 +47,11 @@ impl Into<ProtoUuid> for Uuid {
 }
 
 pub fn parse_server_message(bytes: &[u8]) -> Option<InnerServerMessage> {
+    log("Parsing server message...");
     let msg: ServerMessage = match parse_from_bytes(bytes) {
         Ok(msg) => msg,
         Err(err) => {
+            error("ERROR");
             error(format!("Error parsing message from server: {:?}", err));
             return None;
         }

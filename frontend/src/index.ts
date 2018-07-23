@@ -1,11 +1,16 @@
 import { Socket } from 'phoenix-socket';
 
 const wasm = import('./game_engine');
-import { clearCanvas } from './renderMethods';
+import { getCanvas, clearCanvas } from './renderMethods';
+import { initEventHandlers } from './inputWrapper';
 
-const timer = timeMs => new Promise(f => setTimeout(f, timeMs));
+const canvas = getCanvas();
+
+export const timer = timeMs => new Promise(f => setTimeout(f, timeMs));
 
 wasm.then(async engine => {
+  initEventHandlers(engine);
+
   const tick = () => {
     clearCanvas();
     engine.tick();
@@ -45,7 +50,7 @@ wasm.then(async engine => {
   };
   game.on('temp_gen_server_message_1_res', res => {
     console.log(res);
-    engine.handle_message(res);
+    engine.handle_message(res.msg);
   });
   (window as any).alex2 = () => {
     game.push('temp_gen_server_message_1');

@@ -1,4 +1,6 @@
-const canvas = document.getElementsByTagName('canvas')[0];
+export const getCanvas = () => document.getElementsByTagName('canvas')[0];
+
+const canvas = getCanvas();
 
 const ctx = (() => {
   const ctx = canvas.getContext('2d');
