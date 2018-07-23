@@ -1,7 +1,7 @@
 [package]
 authors = ["Casey Primozic <me@ameo.link>"]
-name = "game-engine"
 build = "build.rs"
+name = "game-engine"
 version = "0.1.0"
 
 [build-dependencies]
@@ -11,7 +11,10 @@ protobuf-codegen-pure = "2.0.3"
 lazy_static = "1.0.2"
 palette = "0.4.0"
 protobuf = "2.0.4"
-rand = { version="0.4.2", features=["i128_support"]}
+
+[dependencies.rand]
+features = ["i128_support"]
+version = "0.4.2"
 
 [dependencies.uuid]
 features = ["u128"]

@@ -9,6 +9,8 @@ const canvas = getCanvas();
 export const timer = timeMs => new Promise(f => setTimeout(f, timeMs));
 
 wasm.then(async engine => {
+  // Provide better error messages when the underlying Rust code panics
+  engine.init_panic_hook();
   initEventHandlers(engine);
 
   const tick = () => {

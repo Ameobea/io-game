@@ -14,6 +14,8 @@ extern crate rand;
 extern crate uuid;
 extern crate wasm_bindgen;
 
+use std::panic;
+
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
@@ -36,6 +38,11 @@ use util::{error, log};
 #[wasm_bindgen(module = "./renderMethods")]
 extern "C" {
     pub fn render_quad(r: u8, g: u8, b: u8, x: u16, y: u16, width: u16, height: u16);
+}
+
+#[wasm_bindgen]
+pub fn init_panic_hook() {
+    panic::set_hook(Box::new(|info: &panic::PanicInfo| error(info.to_string())));
 }
 
 #[wasm_bindgen]
