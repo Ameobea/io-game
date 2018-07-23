@@ -13,16 +13,16 @@ wasm.then(async engine => {
   };
 
   tick();
-  console.log('Tick hook set.');
 
-  await timer(1500);
+  await timer(500);
   const msg1 = engine.temp_gen_server_message_1();
-  console.log('Sending message to generate entity...');
+  console.log(msg1);
   engine.handle_message(msg1);
 
-  await timer(2500);
+  await timer(750);
   const msg2 = engine.temp_gen_server_message_2();
-  console.log('Sending message to start moving is right...');
+  console.log(msg2);
+  console.log(engine.handle_message);
   engine.handle_message(msg2);
 
   ////////

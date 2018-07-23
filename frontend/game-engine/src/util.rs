@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -37,4 +38,11 @@ pub fn error<T: AsRef<str>>(msg: T) {
 
 pub fn math_random() -> f64 {
     random()
+}
+
+/// Simulates a random UUID, but uses the rand crate with WebAssembly support.
+pub fn v4_uuid() -> Uuid {
+    // Because I really don't care, honestly.
+    let high_quality_entropy: (f64, f64) = (math_random(), math_random());
+    unsafe { ::std::mem::transmute(high_quality_entropy) }
 }

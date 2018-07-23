@@ -12,7 +12,17 @@ const ctx = (() => {
 
 export const clearCanvas = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-export const render_quad = (color: string, x: number, y: number, width: number, height: number) => {
+export const render_quad = (
+  r: number,
+  g: number,
+  b: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) => {
+  const color = `rgb(${r},${g},${b})`;
   ctx.strokeStyle = color;
+  ctx.fillStyle = color;
   ctx.fillRect(x, y, width, height);
 };

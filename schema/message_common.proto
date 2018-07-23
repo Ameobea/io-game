@@ -5,7 +5,7 @@ message Uuid {
   fixed64 data_2 = 2;
 }
 
-enum MovementUpdate {
+enum MovementDirection {
   UP = 0;
   RIGHT = 1;
   DOWN = 2;

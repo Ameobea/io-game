@@ -14,12 +14,11 @@
     "typescript": "^2.9.2",
     "webpack": "^4.16.1",
     "webpack-cli": "^3.1.0",
-    "webpack-closure-compiler": "^2.1.6",
     "webpack-dev-server": "^3.1.4"
   },
   "scripts": {
     "start": "webpack-dev-server",
-    "build": "rm -rf dist/* && webpack"
+    "build": "rm -rf dist/* && webpack --config webpack.prod.js"
   },
   "dependencies": {
     "@types/html-webpack-plugin": "^2.30.4",

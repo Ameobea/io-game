@@ -2,20 +2,43 @@ syntax = "proto3";
 
 import "message_common.proto";
 
-message StatusUpdate {
-  enum Status {
-    CREATED = 0;
-    DELETED = 1;
+message PlayerEntity {
+  fixed32 size = 1;
+  MovementDirection direction = 2;
+}
+
+message CreationEvent {
+  double pos_x = 1;
+  double pos_y = 2;
+  oneof entity {
+    PlayerEntity player = 3;
   }
-  Status status = 1;
-  double pos_x = 2;
-  double pos_y = 3;
+}
+
+message StatusUpdate {
+  enum SimpleEvent {
+    DELETION = 0;
+  }
+
+  oneof payload {
+    CreationEvent creation_event = 1;
+    SimpleEvent other = 2;
+  }
+}
+
+message Snapshot {
+  message SnapshotItem {
+    Uuid id = 1;
+    CreationEvent item = 2;
+  }
+
+  repeated SnapshotItem items = 1;
 }
 
 message ServerMessage {
   Uuid id = 1;
   oneof payload {
-    MovementUpdate movement_update = 2;
+    MovementDirection movement_direction = 2;
     StatusUpdate status_update = 3;
   }
 }

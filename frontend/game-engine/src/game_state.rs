@@ -8,7 +8,10 @@ use uuid::Uuid;
 
 use entity::Entity;
 use proto_utils::ServerMessageContent;
-use protos::server_messages::{StatusUpdate, StatusUpdate_Status as Status};
+use protos::server_messages::{
+    CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, StatusUpdate,
+    StatusUpdate_SimpleEvent as SimpleEvent, StatusUpdate_oneof_payload as Status,
+};
 use util::{error, warn};
 
 pub struct State(pub Mutex<GameState>);
@@ -38,29 +41,27 @@ impl GameState {
 
     pub fn apply_msg(&mut self, entity_id: Uuid, update: &ServerMessageContent) {
         match update {
-            ServerMessageContent::status_update(StatusUpdate {
-                status,
-                pos_x,
-                pos_y,
-                ..
-            }) => match status {
-                Status::CREATED => {
-                    let entity = ::game::BaseEntity::new(*pos_x, *pos_y);
-                    match self.entity_map.insert(entity_id, box entity) {
-                        Some(_) => error(format!(
-                            "While creating an entity, an old entity existed with the id {}!",
+            ServerMessageContent::status_update(StatusUpdate { payload, .. }) => match payload {
+                Some(Status::creation_event(CreationEvent {
+                    entity,
+                    pos_x,
+                    pos_y,
+                    ..
+                })) => if let Some(entity) = entity {
+                    self.create_entity(entity, entity_id, *pos_x, *pos_y)
+                } else {
+                    warn("Received entity creation message without an attached entity type!")
+                },
+                Some(Status::other(simple_event)) => match simple_event {
+                    SimpleEvent::DELETION => match self.entity_map.remove(&entity_id) {
+                        Some(_) => (),
+                        None => warn(format!(
+                            "Unable to delete entity {} because it doesn't exist in the entity map!",
                             entity_id
                         )),
-                        None => (),
-                    }
-                }
-                Status::DELETED => match self.entity_map.remove(&entity_id) {
-                    Some(_) => (),
-                    None => warn(format!(
-                        "Unable to delete entity {} because it doesn't exist in the entity map!",
-                        entity_id
-                    )),
+                    },
                 },
+                None => warn("Received a message with an empty status payload!"),
             },
             _ => {
                 let entity: &mut Box<Entity + Send> = match self.entity_map.get_mut(&entity_id) {
@@ -86,6 +87,23 @@ impl GameState {
         for (_id, entity) in &mut self.entity_map {
             entity.tick();
             entity.render();
+        }
+    }
+
+    fn create_entity(&mut self, entity: &EntityType, entity_id: Uuid, pos_x: f64, pos_y: f64) {
+        match entity {
+            EntityType::player(PlayerEntity {
+                direction, size, ..
+            }) => {
+                let entity = ::game::BaseEntity::new(pos_x, pos_y, *direction, *size as u16);
+                match self.entity_map.insert(entity_id, box entity) {
+                    Some(_) => error(format!(
+                        "While creating an entity, an old entity existed with the id {}!",
+                        entity_id
+                    )),
+                    None => (),
+                }
+            }
         }
     }
 }

@@ -14,6 +14,8 @@ extern crate rand;
 extern crate uuid;
 extern crate wasm_bindgen;
 
+use std::u32;
+
 use protobuf::Message;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
@@ -27,32 +29,28 @@ pub mod util;
 
 use self::game_state::state;
 use self::proto_utils::{msg_to_bytes, parse_server_message, InnerServerMessage};
-use self::protos::message_common::MovementUpdate;
-use self::protos::server_messages::{ServerMessage, StatusUpdate, StatusUpdate_Status as Status};
-use util::{error, log};
+use self::protos::message_common::MovementDirection;
+use self::protos::server_messages::{
+    CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, ServerMessage,
+    StatusUpdate, StatusUpdate_oneof_payload as Status,
+};
+use util::{debug, error, log};
 
 #[wasm_bindgen(module = "./renderMethods")]
 extern "C" {
-    pub fn render_quad(color: &str, x: u16, y: u16, width: u16, height: u16);
+    pub fn render_quad(r: u8, g: u8, b: u8, x: u16, y: u16, width: u16, height: u16);
 }
 
 #[wasm_bindgen]
 pub fn handle_message(bytes: &[u8]) {
-    let InnerServerMessage { id, content } = match parse_server_message(bytes) {
-        Some(msg) => msg,
-        None => {
-            return;
-        }
+    if let Some(InnerServerMessage { id, content }) = parse_server_message(bytes) {
+        state().apply_msg(id, &content)
     };
-
-    state().apply_msg(id, &content)
 }
 
-fn create_status_update(status: Status, pos_x: Option<f64>, pos_y: Option<f64>) -> StatusUpdate {
+fn create_status_update(status: Status) -> StatusUpdate {
     let mut status_update = StatusUpdate::new();
-    status_update.set_status(status);
-    status_update.set_pos_x(pos_x.unwrap_or(0.));
-    status_update.set_pos_y(pos_y.unwrap_or(0.));
+    status_update.payload = Some(status);
 
     status_update
 }
@@ -60,14 +58,14 @@ fn create_status_update(status: Status, pos_x: Option<f64>, pos_y: Option<f64>) 
 fn create_server_msg(
     id: Uuid,
     status_update: Option<StatusUpdate>,
-    movement_update: Option<MovementUpdate>,
+    direction: Option<MovementDirection>,
 ) -> ServerMessage {
     let mut msg = ServerMessage::new();
     msg.set_id(id.into());
     if let Some(status_update) = status_update {
         msg.set_status_update(status_update);
-    } else if let Some(movement_update) = movement_update {
-        msg.set_movement_update(movement_update);
+    } else if let Some(direction) = direction {
+        msg.set_movement_direction(direction);
     } else {
         error("ERROR: You must provide either a `status_update` or `movement_update`!");
         panic!();
@@ -76,16 +74,16 @@ fn create_server_msg(
     msg
 }
 
-/// Simulates a random UUID, but uses the rand crate with WebAssembly support.
-fn v4_uuid() -> Uuid {
-    // Because I really don't care, honestly.
-    let high_quality_entropy: (f64, f64) = (self::util::math_random(), self::util::math_random());
-    unsafe { ::std::mem::transmute(high_quality_entropy) }
-}
-
 #[wasm_bindgen]
 pub fn temp_gen_server_message_1() -> Vec<u8> {
-    let status_update = create_status_update(Status::CREATED, Some(50.), Some(50.));
+    let mut creation_event = CreationEvent::new();
+    creation_event.set_pos_x(50.);
+    creation_event.set_pos_y(50.);
+    let mut player_entity = PlayerEntity::new();
+    player_entity.set_direction(MovementDirection::STOP);
+    player_entity.set_size(60);
+    creation_event.entity = Some(EntityType::player(player_entity));
+    let status_update = create_status_update(Status::creation_event(creation_event));
     let msg = create_server_msg(Uuid::nil(), Some(status_update), None);
 
     msg_to_bytes(msg)
@@ -93,7 +91,7 @@ pub fn temp_gen_server_message_1() -> Vec<u8> {
 
 #[wasm_bindgen]
 pub fn temp_gen_server_message_2() -> Vec<u8> {
-    let movement_update = MovementUpdate::RIGHT;
+    let movement_update = MovementDirection::RIGHT;
     let msg = create_server_msg(Uuid::nil(), None, Some(movement_update));
 
     msg_to_bytes(msg)

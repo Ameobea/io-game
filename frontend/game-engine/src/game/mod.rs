@@ -1,17 +1,27 @@
 //! Contains implementation-specific code that is not generic for the engine.
 
-use palette::rgb::Rgb;
-
 use super::render_quad;
 use entity::Entity;
-use protos::message_common::MovementUpdate as Direction;
+use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
 use util::{error, math_random};
+
+struct Rgb {
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+}
+
+impl Rgb {
+    pub fn new(red: u8, green: u8, blue: u8) -> Self {
+        Rgb { red, green, blue }
+    }
+}
 
 /// The basic entity that is used right now.  They're all rendered as a square, but they all have
 /// a unique color.
 pub struct BaseEntity {
-    pub color: Rgb,
+    color: Rgb,
     pub x: f64,
     pub y: f64,
     pub direction: Direction,
@@ -19,17 +29,17 @@ pub struct BaseEntity {
 }
 
 impl BaseEntity {
-    pub fn new(x: f64, y: f64) -> Self {
+    pub fn new(x: f64, y: f64, direction: Direction, size: u16) -> Self {
         BaseEntity {
             color: Rgb::new(
-                math_random() as f32,
-                math_random() as f32,
-                math_random() as f32,
+                (math_random() * 255.) as u8,
+                (math_random() * 255.) as u8,
+                (math_random() * 255.) as u8,
             ),
             x,
             y,
-            direction: Direction::STOP,
-            size: 10,
+            direction,
+            size,
         }
     }
 }
@@ -37,10 +47,9 @@ impl BaseEntity {
 impl Entity for BaseEntity {
     fn render(&self) {
         render_quad(
-            &format!(
-                "rgb({},{},{})",
-                self.color.red, self.color.green, self.color.blue,
-            ),
+            self.color.red,
+            self.color.green,
+            self.color.blue,
             self.x as u16,
             self.y as u16,
             self.size,
@@ -60,7 +69,7 @@ impl Entity for BaseEntity {
 
     fn apply_update(&mut self, update: &ServerMessageContent) {
         match update {
-            ServerMessageContent::movement_update(direction) => self.direction = *direction,
+            ServerMessageContent::movement_direction(direction) => self.direction = *direction,
             _ => error("Unexpected server message type received in entity update handler!"),
         }
     }
