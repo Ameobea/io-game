@@ -23,4 +23,10 @@ defmodule BackendWeb.GameChannel do
     GameState.update(socket, socket.assigns.player_id, %{x: x, y: y + 1})
     {:noreply, socket}
   end
+
+  def handle_in("temp_gen_server_message_1", _data, socket) do
+    msg = <<0, 0>> <> Backend.Message.temp_gen_server_message_1
+    push(socket, "temp_gen_server_message_1_res", msg)
+    {:noreply, socket}
+  end
 end

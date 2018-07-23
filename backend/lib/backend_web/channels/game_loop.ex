@@ -19,8 +19,8 @@ defmodule BackendWeb.GameLoop do
 
   defp run_tick(state) do
     things = BackendWeb.GameState.list("game:first")
-    IO.inspect(things)
-    IO.puts("before: " <> to_string(state))
+    # IO.inspect(things)
+    # IO.puts("before: " <> to_string(state))
     state + @timedelay
   end
 

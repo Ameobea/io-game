@@ -43,4 +43,11 @@ wasm.then(async engine => {
   (window as any).alex = () => {
     game.push('move_up');
   };
+  game.on('temp_gen_server_message_1_res', res => {
+    console.log(res);
+    engine.handle_message(res);
+  });
+  (window as any).alex2 = () => {
+    game.push('temp_gen_server_message_1');
+  };
 });
