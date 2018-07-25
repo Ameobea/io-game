@@ -6,7 +6,6 @@
     u128_type
 )]
 
-extern crate palette;
 extern crate protobuf;
 extern crate uuid;
 extern crate wasm_bindgen;
@@ -26,7 +25,9 @@ pub mod user_input;
 pub mod util;
 
 use self::game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
-use self::proto_utils::{msg_to_bytes, parse_server_message, InnerServerMessage};
+use self::proto_utils::{
+    msg_to_bytes, parse_server_message, parse_socket_message, InnerServerMessage,
+};
 use self::protos::message_common::MovementDirection;
 use self::protos::server_messages::{
     CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, ServerMessage,
@@ -129,4 +130,9 @@ pub fn temp_gen_server_message_2() -> Vec<u8> {
 pub fn tick() {
     let cur_tick = get_state().tick();
     get_effects_manager().render_all(cur_tick);
+}
+
+#[wasm_bindgen]
+pub fn decode_socket_message(bytes: &[u8]) -> Option<String> {
+    parse_socket_message(bytes)
 }

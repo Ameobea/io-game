@@ -7,7 +7,9 @@ use super::send_message;
 use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::Uuid as ProtoUuid;
 use protos::server_messages::ServerMessage;
-pub use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
+pub use protos::server_messages::{
+    ServerMessage_oneof_payload as ServerMessageContent, SocketMessage,
+};
 use util::{error, log, warn};
 
 pub struct InnerServerMessage {
@@ -63,11 +65,13 @@ impl Into<ProtoUuid> for Uuid {
 }
 
 pub fn parse_server_message(bytes: &[u8]) -> Option<InnerServerMessage> {
-    log("Parsing server message...");
     let msg: ServerMessage = match parse_from_bytes(bytes) {
         Ok(msg) => msg,
         Err(err) => {
-            error(format!("Error parsing message from server: {:?}", err));
+            error(format!(
+                "Error parsing protobuf message from server: {:?}",
+                err
+            ));
             return None;
         }
     };
@@ -93,4 +97,29 @@ pub fn send_user_message(payload: ClientMessageContent) {
     let bytes = msg_to_bytes(client_msg);
     log(format!("Sending user message: {:?}", bytes));
     send_message(bytes);
+}
+
+pub fn parse_socket_message(bytes: &[u8]) -> Option<String> {
+    let mut socket_msg: SocketMessage = match parse_from_bytes(bytes) {
+        Ok(msg) => msg,
+        Err(err) => {
+            error(format!("Error parsing socket message: {:?}", err));
+            return None;
+        }
+    };
+
+    let status = socket_msg
+        .payload
+        .take()
+        .map(|payload| payload.status)
+        .unwrap_or_else(|| "".into());
+
+    let joined = [
+        socket_msg.get_topic().into(),
+        socket_msg.get_event().into(),
+        status,
+        socket_msg.get_field_ref().into(),
+    ].join("\n");
+
+    Some(joined)
 }

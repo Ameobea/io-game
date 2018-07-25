@@ -22,26 +22,31 @@ socket.onConnOpen = function() {
 
 const prevOnConnMessage = socket.onConnMessage;
 
-socket.onConnMessage = function (rawMessage){
-  if(!(rawMessage.data instanceof ArrayBuffer)){
-    return prevOnConnMessage.apply(this, arguments);
-  }
-  let msg = engine.decodeSocketMessage(rawMessage.data);
-  let topic = msg.topic;
-  let event = msg.event;
-  let payload = msg.payload;
-  let ref = msg.ref;
+const setRawMessageHandler = (engine: typeof import('./game_engine')) => {
+  socket.onConnMessage = function(rawMessage) {
+    if (!(rawMessage.data instanceof ArrayBuffer)) {
+      return prevOnConnMessage.apply(this, arguments);
+    }
+    let msg = engine.decode_socket_message(rawMessage.data);
+    if (!msg) {
+      // Message was a game message and was handled by the game engine
+      return;
+    }
+    let [topic, event, status, ref] = msg.split('\n');
 
-  this.log("receive", (payload.status || "") + " " + topic + " " + event + " " + (ref && "(" + ref + ")" || ""), payload);
-  this.channels.filter(function (channel) {
-    return channel.isMember(topic);
-  }).forEach(function (channel) {
-    return channel.trigger(event, payload, ref);
-  });
-  this.stateChangeCallbacks.message.forEach(function (callback) {
-    return callback(msg);
-  });
-}
+    this.log(`receive: ${status || ''} ${topic} ${event} ${(ref && '(' + ref + ')') || ''}`);
+    this.channels
+      .filter(function(channel) {
+        return channel.isMember(topic);
+      })
+      .forEach(function(channel) {
+        return channel.trigger(event, { status }, ref);
+      });
+    this.stateChangeCallbacks.message.forEach(function(callback) {
+      return callback(msg);
+    });
+  };
+};
 
 // end making socket read proto instead of json
 
