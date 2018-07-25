@@ -1,6 +1,24 @@
-defmodule Backend.Message do
+defmodule Backend.ProtoMessage do
   use Protobuf, from: Path.wildcard(Path.expand("../../../schema/**/*.proto", __DIR__))
-  alias Backend.Message.{PlayerEntity, CreationEvent, StatusUpdate, ServerMessage, Uuid}
+
+  alias Backend.ProtoMessage.{
+    PlayerEntity,
+    CreationEvent,
+    StatusUpdate,
+    ServerMessage,
+    Uuid,
+    SocketMessage,
+    Payload,
+  }
+
+  def encode_socket_message(%Phoenix.Socket.Message{} = message) do
+    SocketMessage.encode(SocketMessage.new(%{
+      topic: message.topic,
+      event: message.event,
+      ref: message.ref,
+      payload: message.payload && Payload.new(message.payload),
+    }))
+  end
 
   def temp_gen_server_message_1() do
     entity = PlayerEntity.new(%{size: 60, direction: :STOP})
@@ -10,8 +28,8 @@ defmodule Backend.Message do
       entity: {:player, entity}
     })
     status_update = StatusUpdate.new(%{payload: {:creation_event, event}})
-    server_message = ServerMessage.new(%{id: generate_uuid(), payload: {:status_update, status_update}})
-    ServerMessage.encode(server_message)
+    ServerMessage.new(%{id: generate_uuid(), payload: {:status_update, status_update}})
+    # ServerMessage.encode(server_message)
   end
 
   def generate_uuid() do

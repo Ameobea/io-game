@@ -42,3 +42,15 @@ message ServerMessage {
     StatusUpdate status_update = 3;
   }
 }
+
+message Payload {
+  string status = 1;
+  ServerMessage response = 2;
+}
+
+message SocketMessage {
+  string topic = 1;
+  string event = 2;
+  string ref = 3;
+  Payload payload = 4;
+}

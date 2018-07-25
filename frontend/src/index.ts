@@ -12,6 +12,39 @@ console.log('Initializing WS connection to game server...');
 const socket = new Socket('ws://localhost:4000/socket');
 export const gameSocket = socket.channel('game:first');
 
+// making socket read proto instead of json
+
+const prevOnConnOpen = socket.onConnOpen;
+socket.onConnOpen = function() {
+  this.conn.binaryType = 'arraybuffer';
+  prevOnConnOpen.apply(this, arguments);
+};
+
+const prevOnConnMessage = socket.onConnMessage;
+
+socket.onConnMessage = function (rawMessage){
+  if(!(rawMessage.data instanceof ArrayBuffer)){
+    return prevOnConnMessage.apply(this, arguments);
+  }
+  let msg = engine.decodeSocketMessage(rawMessage.data);
+  let topic = msg.topic;
+  let event = msg.event;
+  let payload = msg.payload;
+  let ref = msg.ref;
+
+  this.log("receive", (payload.status || "") + " " + topic + " " + event + " " + (ref && "(" + ref + ")" || ""), payload);
+  this.channels.filter(function (channel) {
+    return channel.isMember(topic);
+  }).forEach(function (channel) {
+    return channel.trigger(event, payload, ref);
+  });
+  this.stateChangeCallbacks.message.forEach(function (callback) {
+    return callback(msg);
+  });
+}
+
+// end making socket read proto instead of json
+
 wasm
   .then(async engine => {
     (window as any).handle_message = engine.handle_message;

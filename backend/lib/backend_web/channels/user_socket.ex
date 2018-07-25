@@ -5,7 +5,7 @@ defmodule BackendWeb.UserSocket do
   channel "game:first", BackendWeb.GameChannel
 
   ## Transports
-  transport :websocket, Phoenix.Transports.WebSocket
+  transport :websocket, Phoenix.Transports.WebSocket, serializer: [{BackendWeb.ProtoSerializer}]
   # transport :longpoll, Phoenix.Transports.LongPoll
 
   # Socket params are passed from the client and can

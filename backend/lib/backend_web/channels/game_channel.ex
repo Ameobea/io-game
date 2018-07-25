@@ -25,7 +25,7 @@ defmodule BackendWeb.GameChannel do
   end
 
   def handle_in("temp_gen_server_message_1", _data, socket) do
-    msg = Backend.Message.temp_gen_server_message_1
+    msg = Backend.ProtoMessage.temp_gen_server_message_1
     push(socket, "temp_gen_server_message_1_res", %{msg: :binary.bin_to_list(msg)})
     {:noreply, socket}
   end
