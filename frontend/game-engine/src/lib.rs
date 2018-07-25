@@ -25,6 +25,7 @@ pub mod game_state;
 pub mod proto_utils;
 pub mod protos;
 pub mod render_effects;
+pub mod user_input;
 pub mod util;
 
 use self::game_state::{get_effect_manager, get_state};
@@ -34,8 +35,7 @@ use self::protos::server_messages::{
     CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, ServerMessage,
     StatusUpdate, StatusUpdate_oneof_payload as Status,
 };
-use game::effects::DemoCircleEffect;
-use util::{error, Color};
+use util::error;
 
 #[wasm_bindgen(module = "./renderMethods")]
 extern "C" {
@@ -52,6 +52,11 @@ extern "C" {
         endAngle: f64,
         counterClockwise: bool,
     );
+}
+
+#[wasm_bindgen(module = "./inputWrapper")]
+extern "C" {
+    pub fn send_message(msg: Vec<u8>);
 }
 
 #[wasm_bindgen]
@@ -122,40 +127,3 @@ pub fn tick() {
     let cur_tick = get_state().tick();
     get_effect_manager().render_all(cur_tick);
 }
-
-#[wasm_bindgen]
-pub fn handle_mouse_down(x: u16, y: u16) {
-    let effect = DemoCircleEffect {
-        color: Color::random(),
-        width: 6,
-        x: x as f32,
-        y: y as f32,
-        cur_size: 0.,
-        max_size: 30.,
-        increment: 1.,
-    };
-    get_effect_manager().add_effect(box effect);
-}
-
-#[wasm_bindgen]
-pub fn handle_mouse_move(x: u16, y: u16) {
-    let effect = DemoCircleEffect {
-        color: Color::random(),
-        width: 6,
-        x: x as f32,
-        y: y as f32,
-        cur_size: 0.,
-        max_size: 6.,
-        increment: 0.75,
-    };
-    get_effect_manager().add_effect(box effect);
-}
-
-#[wasm_bindgen]
-pub fn handle_mouse_up(x: u16, y: u16) {}
-
-#[wasm_bindgen]
-pub fn handle_key_down(code: usize) {}
-
-#[wasm_bindgen]
-pub fn handle_key_up(code: usize) {}

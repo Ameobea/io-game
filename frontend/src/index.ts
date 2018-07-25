@@ -8,6 +8,10 @@ const canvas = getCanvas();
 
 export const timer = timeMs => new Promise(f => setTimeout(f, timeMs));
 
+console.log('Initializing WS connection to game server...');
+const socket = new Socket('ws://localhost:4000/socket');
+export const gameSocket = socket.channel('game:first');
+
 wasm
   .then(async engine => {
     (window as any).handle_message = engine.handle_message;
@@ -36,28 +40,24 @@ wasm
 
     ////////
 
-    console.log('Initializing WS connection to game server...');
-    const socket = new Socket('ws://localhost:4000/socket');
     socket.onError = console.error;
     socket.onConnError = console.error;
     socket.connect();
 
-    const game = socket.channel('game:first');
-    const join = game.join();
-    console.log(join);
+    const join = gameSocket.join();
     join
       .receive('ok', () => console.log('Connected to lobby!'))
       .receive('error', (reasons: any) => console.error('create failed', reasons));
 
     (window as any).alex = () => {
-      game.push('move_up');
+      gameSocket.push('move_up');
     };
-    game.on('temp_gen_server_message_1_res', res => {
+    gameSocket.on('temp_gen_server_message_1_res', res => {
       console.log(res);
       engine.handle_message(res.msg);
     });
     (window as any).alex2 = () => {
-      game.push('temp_gen_server_message_1');
+      gameSocket.push('temp_gen_server_message_1');
     };
   })
   .catch(err => console.error(`Error while loading Wasm module: ${err}`));

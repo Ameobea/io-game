@@ -3,6 +3,8 @@ use std::mem;
 use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
 
+use super::send_message;
+use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::Uuid as ProtoUuid;
 use protos::server_messages::ServerMessage;
 pub use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
@@ -82,4 +84,15 @@ pub fn msg_to_bytes<M: Message>(msg: M) -> Vec<u8> {
         ));
         panic!()
     })
+}
+
+/// Creates a `ClientMessage` with the given payload, converts it to binary, encodes it into
+/// binary, and sends it over the WebSocket to the backend.
+pub fn send_user_message(payload: ClientMessageContent) {
+    let mut client_msg = ClientMessage::new();
+    client_msg.payload = Some(payload);
+
+    let bytes = msg_to_bytes(client_msg);
+    log(format!("Sending user message: {:?}", bytes));
+    send_message(bytes);
 }

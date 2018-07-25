@@ -7,7 +7,6 @@ message ConnectMessage {
 }
 
 message ClientMessage {
-  Uuid id = 1;
   oneof payload {
     ConnectMessage connect = 2;
     MovementDirection player_move = 3;

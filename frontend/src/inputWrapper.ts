@@ -3,6 +3,7 @@
  */
 
 import { getCanvas } from './renderMethods';
+import { gameSocket } from '.';
 
 const canvas = getCanvas();
 
@@ -14,3 +15,5 @@ export const initEventHandlers = (engine: typeof import('./game_engine')) => {
   document.addEventListener('keydown', evt => engine.handle_key_down(evt.keyCode));
   document.addEventListener('keyup', evt => engine.handle_key_up(evt.keyCode));
 };
+
+export const send_message = (message: Uint8Array) => gameSocket.push(message);
