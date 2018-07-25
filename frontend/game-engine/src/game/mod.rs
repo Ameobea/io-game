@@ -2,7 +2,7 @@
 
 use super::render_quad;
 use entity::Entity;
-use game_state::get_effect_manager;
+use game_state::get_effects_manager;
 use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
 use util::{error, math_random, Color};
@@ -82,7 +82,7 @@ impl Entity for BaseEntity {
                 increment: 0.5,
             };
 
-            get_effect_manager().add_effect(box effect);
+            get_effects_manager().add_effect(box effect);
         }
     }
 

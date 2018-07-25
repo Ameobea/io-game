@@ -6,11 +6,8 @@
     u128_type
 )]
 
-#[macro_use]
-extern crate lazy_static;
 extern crate palette;
 extern crate protobuf;
-extern crate rand;
 extern crate uuid;
 extern crate wasm_bindgen;
 
@@ -28,13 +25,14 @@ pub mod render_effects;
 pub mod user_input;
 pub mod util;
 
-use self::game_state::{get_effect_manager, get_state};
+use self::game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
 use self::proto_utils::{msg_to_bytes, parse_server_message, InnerServerMessage};
 use self::protos::message_common::MovementDirection;
 use self::protos::server_messages::{
     CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, ServerMessage,
     StatusUpdate, StatusUpdate_oneof_payload as Status,
 };
+use render_effects::RenderEffectManager;
 use util::error;
 
 #[wasm_bindgen(module = "./renderMethods")]
@@ -60,8 +58,14 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn init_panic_hook() {
+pub fn init() {
     panic::set_hook(Box::new(|info: &panic::PanicInfo| error(info.to_string())));
+
+    let game_state = box GameState::new();
+    unsafe { STATE = Box::into_raw(game_state) };
+
+    let effects_manager = box RenderEffectManager::new();
+    unsafe { EFFECTS_MANAGER = Box::into_raw(effects_manager) };
 }
 
 #[wasm_bindgen]
@@ -92,8 +96,7 @@ fn create_server_msg(
     } else if let Some(direction) = direction {
         msg.set_movement_direction(direction);
     } else {
-        error("ERROR: You must provide either a `status_update` or `movement_update`!");
-        panic!();
+        panic!("ERROR: You must provide either a `status_update` or `movement_update`!");
     }
 
     msg
@@ -125,5 +128,5 @@ pub fn temp_gen_server_message_2() -> Vec<u8> {
 #[wasm_bindgen]
 pub fn tick() {
     let cur_tick = get_state().tick();
-    get_effect_manager().render_all(cur_tick);
+    get_effects_manager().render_all(cur_tick);
 }

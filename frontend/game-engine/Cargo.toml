@@ -8,13 +8,8 @@ version = "0.1.0"
 protobuf-codegen-pure = "2.0.3"
 
 [dependencies]
-lazy_static = "1.0.2"
 palette = "0.4.0"
 protobuf = "2.0.4"
-
-[dependencies.rand]
-features = ["i128_support"]
-version = "0.4.2"
 
 [dependencies.uuid]
 features = ["u128"]
@@ -27,5 +22,11 @@ rev = "315b5d848ee6c2383a602178364cbe359be664b8"
 [lib]
 crate-type = ["cdylib"]
 
+[profile.dev]
+lto = false
+opt-level = 3
+
 [profile.release]
 lto = true
+panic = 'abort'
+

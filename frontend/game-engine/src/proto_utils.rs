@@ -67,7 +67,6 @@ pub fn parse_server_message(bytes: &[u8]) -> Option<InnerServerMessage> {
     let msg: ServerMessage = match parse_from_bytes(bytes) {
         Ok(msg) => msg,
         Err(err) => {
-            error("ERROR");
             error(format!("Error parsing message from server: {:?}", err));
             return None;
         }
@@ -78,11 +77,10 @@ pub fn parse_server_message(bytes: &[u8]) -> Option<InnerServerMessage> {
 
 pub fn msg_to_bytes<M: Message>(msg: M) -> Vec<u8> {
     msg.write_to_bytes().unwrap_or_else(|err| {
-        error(format!(
+        panic!(format!(
             "Error while writing created `ServerMessage` to bytes: {:?}",
             err
-        ));
-        panic!()
+        ))
     })
 }
 

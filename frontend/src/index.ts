@@ -15,8 +15,9 @@ export const gameSocket = socket.channel('game:first');
 wasm
   .then(async engine => {
     (window as any).handle_message = engine.handle_message;
-    // Provide better error messages when the underlying Rust code panics
-    engine.init_panic_hook();
+    // Initialize internal game state and provide better error messages when the underlying Rust
+    // code panics.
+    engine.init();
     initEventHandlers(engine);
 
     const tick = () => {

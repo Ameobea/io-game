@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::mem;
-use std::sync::Mutex;
+use std::ptr;
 
 use uuid::Uuid;
 
@@ -13,32 +13,31 @@ use protos::server_messages::{
     StatusUpdate_SimpleEvent as SimpleEvent, StatusUpdate_oneof_payload as Status,
 };
 use render_effects::RenderEffectManager;
+use user_input::CurHeldKeys;
 use util::{error, log, warn};
 
-pub struct State(pub Mutex<GameState>);
+pub static mut STATE: *mut GameState = ptr::null_mut();
+pub static mut EFFECTS_MANAGER: *mut RenderEffectManager = ptr::null_mut();
+pub static mut CUR_HELD_KEYS: *mut CurHeldKeys = ptr::null_mut();
 
-lazy_static! {
-    static ref STATE: State = State(Mutex::new(GameState::new()));
-    static ref RENDER_EFFECTS: Mutex<RenderEffectManager> = Mutex::new(RenderEffectManager::new());
-}
-
-/// Helper function to get the global game state.  We can do this disgusting unsafe lifetime hack
-/// because this is running in WebAssembly.  The Mutex isn't even real, everything is running in a
-/// single thread, and the global state will never get dropped anyway.
+#[inline(always)]
 pub fn get_state() -> &'static mut GameState {
-    let inner: &mut GameState = &mut *STATE.0.lock().unwrap();
-    unsafe { mem::transmute(inner) }
+    unsafe { mem::transmute(STATE) }
 }
 
-/// Helper function to get the global render effect manager.  Uses the same unsafe hack as `state`.
-pub fn get_effect_manager() -> &'static mut RenderEffectManager {
-    let inner: &mut RenderEffectManager = &mut *RENDER_EFFECTS.lock().unwrap();
-    unsafe { mem::transmute(inner) }
+#[inline(always)]
+pub fn get_effects_manager() -> &'static mut RenderEffectManager {
+    unsafe { mem::transmute(EFFECTS_MANAGER) }
+}
+
+#[inline(always)]
+pub fn get_cur_held_keys() -> &'static mut CurHeldKeys {
+    unsafe { mem::transmute(CUR_HELD_KEYS) }
 }
 
 pub struct GameState {
     cur_tick: usize,
-    pub entity_map: BTreeMap<Uuid, Box<Entity + Send>>,
+    pub entity_map: BTreeMap<Uuid, Box<Entity + Send + Sync>>,
 }
 
 impl GameState {
@@ -68,7 +67,7 @@ impl GameState {
                 None => warn("Received a message with an empty status payload!"),
             },
             _ => {
-                let entity: &mut Box<Entity + Send> = match self.entity_map.get_mut(&entity_id) {
+                let entity: &mut Box<Entity + Send + Sync> = match self.entity_map.get_mut(&entity_id) {
                     Some(entity) => entity,
                     None => {
                         error(format!(
