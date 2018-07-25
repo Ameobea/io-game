@@ -6,7 +6,7 @@ use proto_utils::ServerMessageContent;
 pub trait Entity {
     fn render(&self);
 
-    fn tick(&mut self);
+    fn tick(&mut self, tick: usize);
 
     fn apply_update(&mut self, update: &ServerMessageContent);
 }

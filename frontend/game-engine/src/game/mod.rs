@@ -2,9 +2,14 @@
 
 use super::render_quad;
 use entity::Entity;
+use game_state::get_effect_manager;
 use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
-use util::{error, math_random};
+use util::{error, math_random, Color};
+
+pub mod effects;
+
+use self::effects::DemoCircleEffect;
 
 struct Rgb {
     pub red: u8,
@@ -57,13 +62,27 @@ impl Entity for BaseEntity {
         );
     }
 
-    fn tick(&mut self) {
+    fn tick(&mut self, tick: usize) {
         match self.direction {
             Direction::DOWN => self.y += 0.1,
             Direction::LEFT => self.x -= 0.1,
             Direction::RIGHT => self.x += 0.1,
             Direction::UP => self.y -= 0.1,
             Direction::STOP => (),
+        };
+
+        if tick % 120 == 0 {
+            let effect = DemoCircleEffect {
+                color: Color::random(),
+                width: 3,
+                x: self.x as f32,
+                y: (self.y + 50.) as f32,
+                cur_size: 0.,
+                max_size: 50.,
+                increment: 0.5,
+            };
+
+            get_effect_manager().add_effect(box effect);
         }
     }
 

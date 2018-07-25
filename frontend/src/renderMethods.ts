@@ -28,3 +28,23 @@ export const render_quad = (
   ctx.fillStyle = color;
   ctx.fillRect(x, y, width, height);
 };
+
+export const render_arc = (
+  r: number,
+  g: number,
+  b: number,
+  x: number,
+  y: number,
+  width: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+  counterClockwise: boolean
+) => {
+  ctx.beginPath();
+  const color = `rgb(${r},${g},${b})`;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.arc(x, y, radius, startAngle, endAngle, counterClockwise);
+  ctx.stroke();
+};

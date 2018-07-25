@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::mem;
 
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
@@ -44,5 +45,18 @@ pub fn math_random() -> f64 {
 pub fn v4_uuid() -> Uuid {
     // Because I really don't care, honestly.
     let high_quality_entropy: (f64, f64) = (math_random(), math_random());
-    unsafe { ::std::mem::transmute(high_quality_entropy) }
+    unsafe { mem::transmute(high_quality_entropy) }
+}
+
+pub struct Color {
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+}
+
+impl Color {
+    pub fn random() -> Self {
+        let (red, green, blue, _): (u8, u8, u8, [u8; 5]) = unsafe { mem::transmute(math_random()) };
+        Color { red, green, blue }
+    }
 }

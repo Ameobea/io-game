@@ -26,3 +26,6 @@ rev = "315b5d848ee6c2383a602178364cbe359be664b8"
 
 [lib]
 crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
