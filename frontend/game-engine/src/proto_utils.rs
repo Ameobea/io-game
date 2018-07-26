@@ -4,11 +4,12 @@ use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
 
 use super::send_message;
+use game_state::get_state;
 use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::Uuid as ProtoUuid;
 use protos::server_messages::ServerMessage;
 pub use protos::server_messages::{
-    ServerMessage_oneof_payload as ServerMessageContent, SocketMessage,
+    Payload, ServerMessage_oneof_payload as ServerMessageContent, SocketMessage,
 };
 use util::{error, log, warn};
 
@@ -108,16 +109,27 @@ pub struct SocketMessageData<'a> {
     pub _ref: &'a str,
 }
 
-pub fn parse_socket_message<'a>(
-    socket_msg: &'a mut SocketMessage,
-) -> Option<SocketMessageData<'a>> {
-    let status = socket_msg.payload.take().map(|payload| payload.status);
+pub fn parse_socket_message<'a>(socket_msg: &'a mut SocketMessage) -> SocketMessageData<'a> {
+    let payload_opt = socket_msg.payload.take();
+    let status: Option<String> = if let Some(payload) = payload_opt {
+        let Payload {
+            status, response, ..
+        } = payload;
+        if response.is_some() {
+            if let Some(InnerServerMessage { id, content }) = response.unwrap().into() {
+                get_state().apply_msg(id, &content);
+            }
+        }
 
-    let data = SocketMessageData {
+        Some(status)
+    } else {
+        None
+    };
+
+    SocketMessageData {
         topic: socket_msg.get_topic().into(),
         event: socket_msg.get_event().into(),
         status,
         _ref: socket_msg.get_field_ref().into(),
-    };
-    Some(data)
+    }
 }

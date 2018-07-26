@@ -146,8 +146,6 @@ pub fn decode_socket_message(bytes: &[u8]) -> JsValue {
         }
     };
 
-    match parse_socket_message(&mut socket_msg) {
-        Some(data) => JsValue::from_serde(&data).expect("Error parsing socket data into JSON!"),
-        None => JsValue::null(),
-    }
+    let parsed = parse_socket_message(&mut socket_msg);
+    JsValue::from_serde(&parsed).expect("Error parsing socket data into JSON!")
 }

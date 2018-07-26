@@ -29,10 +29,10 @@ const setRawMessageHandler = (engine: typeof import('./game_engine')) => {
     }
     let msg = engine.decode_socket_message(rawMessage.data);
     if (!msg) {
-      // Message was a game message and was handled by the game engine
+      console.error('Error parsing protobuf message from the server!');
       return;
     }
-    let { topic, event, status, ref } = msg;
+    let { topic, event, status, _ref: ref } = msg;
 
     this.log(`receive: ${status || ''} ${topic} ${event} ${(ref && '(' + ref + ')') || ''}`);
     this.channels
