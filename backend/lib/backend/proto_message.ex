@@ -16,7 +16,7 @@ defmodule Backend.ProtoMessage do
       topic: message.topic,
       event: message.event,
       ref: message.ref,
-      payload: message.payload && Payload.new(message.payload),
+      payload: encode_payload(message.payload),
     }))
   end
 
@@ -43,4 +43,9 @@ defmodule Backend.ProtoMessage do
     Uuid.new(%{data_1: part1, data_2: part2})
   end
 
+  defp encode_payload(nil), do: nil
+  defp encode_payload(%{}), do: nil
+  defp encode_payload(payload) do
+    Payload.new(payload)
+  end
 end
