@@ -14,18 +14,6 @@ export const gameSocket = socket.channel('game:first');
 
 // making socket read proto instead of json
 
-// https://github.com/mspanc/phoenix_socket/blob/b29ff7b1a16bfb1c840a097c5114f96c1bb81539/vendor/socket.js#L590-L600
-socket.push = function(data) {
-  let { topic, event, payload, ref } = data;
-  let callback = () => this.conn.send(engine.generate_client_message_wrapper(data));
-  this.log('push', `${topic} ${event} (${ref})`, payload);
-  if (this.isConnected()) {
-    callback();
-  } else {
-    this.sendBuffer.push(callback);
-  }
-};
-
 const prevOnConnOpen = socket.onConnOpen;
 socket.onConnOpen = function() {
   this.conn.binaryType = 'arraybuffer';
@@ -34,7 +22,7 @@ socket.onConnOpen = function() {
 
 const prevOnConnMessage = socket.onConnMessage;
 
-const setRawMessageHandler = (engine: typeof import('./game_engine')) => {
+const setupSocketHandlers = (engine: typeof import('./game_engine')) => {
   socket.onConnMessage = function(rawMessage) {
     if (!(rawMessage.data instanceof ArrayBuffer)) {
       return prevOnConnMessage.apply(this, arguments);
@@ -57,6 +45,19 @@ const setRawMessageHandler = (engine: typeof import('./game_engine')) => {
     this.stateChangeCallbacks.message.forEach(function(callback) {
       return callback(msg);
     });
+  };
+
+  // https://github.com/mspanc/phoenix_socket/blob/b29ff7b1a16bfb1c840a097c5114f96c1bb81539/vendor/socket.js#L590-L600
+  socket.push = function(data) {
+    let { topic, event, payload, ref } = data;
+    let callback = () =>
+      this.conn.send(engine.generate_client_message_wrapper(topic, event, payload, ref));
+    this.log('push', `${topic} ${event} (${ref})`, payload);
+    if (this.isConnected()) {
+      callback();
+    } else {
+      this.sendBuffer.push(callback);
+    }
   };
 };
 

@@ -35,10 +35,17 @@ message Snapshot {
   repeated SnapshotItem items = 1;
 }
 
+message MovementUpdate {
+  float pos_x = 1;
+  float pos_y = 2;
+  float velocity_x = 3; // pixels/tick (60 ticks/second)
+  float velocity_y = 4; // pixels/tick (60 ticks/second)
+}
+
 message ServerMessage {
   Uuid id = 1;
   oneof payload {
-    MovementDirection movement_direction = 2;
+    MovementUpdate movement_update = 2;
     StatusUpdate status_update = 3;
   }
 }

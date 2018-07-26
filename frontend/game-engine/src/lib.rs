@@ -33,10 +33,10 @@ use self::game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGE
 use self::proto_utils::{
     msg_to_bytes, parse_server_message, parse_socket_message, InnerServerMessage,
 };
-use self::protos::message_common::MovementDirection;
+use self::protos::message_common::MovementDirection as Direction;
 use self::protos::server_messages::{
-    CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, ServerMessage,
-    SocketMessage, StatusUpdate, StatusUpdate_oneof_payload as Status,
+    CreationEvent, CreationEvent_oneof_entity as EntityType, MovementUpdate, PlayerEntity,
+    ServerMessage, SocketMessage, StatusUpdate, StatusUpdate_oneof_payload as Status,
 };
 use render_effects::RenderEffectManager;
 use util::error;
@@ -93,14 +93,14 @@ fn create_status_update(status: Status) -> StatusUpdate {
 fn create_server_msg(
     id: Uuid,
     status_update: Option<StatusUpdate>,
-    direction: Option<MovementDirection>,
+    movement: Option<MovementUpdate>,
 ) -> ServerMessage {
     let mut msg = ServerMessage::new();
     msg.set_id(id.into());
     if let Some(status_update) = status_update {
         msg.set_status_update(status_update);
-    } else if let Some(direction) = direction {
-        msg.set_movement_direction(direction);
+    } else if let Some(direction) = movement {
+        msg.set_movement_update(direction);
     } else {
         panic!("ERROR: You must provide either a `status_update` or `movement_update`!");
     }
@@ -114,7 +114,7 @@ pub fn temp_gen_server_message_1() -> Vec<u8> {
     creation_event.set_pos_x(50.);
     creation_event.set_pos_y(50.);
     let mut player_entity = PlayerEntity::new();
-    player_entity.set_direction(MovementDirection::STOP);
+    player_entity.set_direction(Direction::STOP);
     player_entity.set_size(50);
     creation_event.entity = Some(EntityType::player(player_entity));
     let status_update = create_status_update(Status::creation_event(creation_event));
@@ -125,7 +125,11 @@ pub fn temp_gen_server_message_1() -> Vec<u8> {
 
 #[wasm_bindgen]
 pub fn temp_gen_server_message_2() -> Vec<u8> {
-    let movement_update = MovementDirection::RIGHT;
+    let mut movement_update = MovementUpdate::new();
+    movement_update.set_pos_x(50.);
+    movement_update.set_pos_y(50.);
+    movement_update.set_velocity_x(0.75);
+    movement_update.set_velocity_y(1.339);
     let msg = create_server_msg(Uuid::nil(), None, Some(movement_update));
 
     msg_to_bytes(msg)

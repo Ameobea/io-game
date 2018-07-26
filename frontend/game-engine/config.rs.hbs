@@ -1,13 +1,15 @@
 pub struct Conf {
-    physics: PhysicsConf,
+    pub physics: PhysicsConf,
 }
 
 pub struct PhysicsConf {
-    acceleration_per_tick: f32,
+    pub acceleration_per_tick: f32,
+    pub max_player_speed: f32,
 }
 
 pub const CONF: Conf = Conf {
     physics: PhysicsConf {
         acceleration_per_tick: {{ f32 physics-accelerationPerTick }},
+        max_player_speed: {{ f32 physics-maxPlayerSpeed }},
     },
 };
