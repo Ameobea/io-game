@@ -17,6 +17,11 @@ defmodule BackendWeb.GameChannel do
     {:noreply, socket}
   end
 
+  def handle_in("game", data, socket) do
+    # client_message = ClientMessage.decode(data)
+    {:noreply, socket}
+  end
+
   def handle_in("move_up", _data, socket) do
     player_info = GameState.get_player(socket)
     %{ x: x, y: y } = player_info
