@@ -19,6 +19,7 @@ use protobuf::parse_from_bytes;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
+pub mod conf;
 pub mod entity;
 pub mod game;
 pub mod game_state;
@@ -114,7 +115,7 @@ pub fn temp_gen_server_message_1() -> Vec<u8> {
     creation_event.set_pos_y(50.);
     let mut player_entity = PlayerEntity::new();
     player_entity.set_direction(MovementDirection::STOP);
-    player_entity.set_size(60);
+    player_entity.set_size(50);
     creation_event.entity = Some(EntityType::player(player_entity));
     let status_update = create_status_update(Status::creation_event(creation_event));
     let msg = create_server_msg(Uuid::nil(), Some(status_update), None);
@@ -148,4 +149,14 @@ pub fn decode_socket_message(bytes: &[u8]) -> JsValue {
 
     let parsed = parse_socket_message(&mut socket_msg);
     JsValue::from_serde(&parsed).expect("Error parsing socket data into JSON!")
+}
+
+#[wasm_bindgen]
+pub fn generate_client_message_wrapper(
+    _topic: &str,
+    _event: &str,
+    _payload: &[u8],
+    _ref: String,
+) -> Vec<u8> {
+    unimplemented!();
 }

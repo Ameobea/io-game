@@ -1,11 +1,12 @@
 //! Contains implementation-specific code that is not generic for the engine.
 
 use super::render_quad;
+use conf::CONF;
 use entity::Entity;
 use game_state::get_effects_manager;
 use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
-use util::{error, math_random, Color};
+use util::{math_random, Color};
 
 pub mod effects;
 
@@ -25,17 +26,22 @@ impl Rgb {
 
 /// The basic entity that is used right now.  They're all rendered as a square, but they all have
 /// a unique color.
-pub struct BaseEntity {
+pub struct PlayerEntity {
     color: Rgb,
-    pub x: f64,
-    pub y: f64,
-    pub direction: Direction,
+    pub x: f32,
+    pub y: f32,
+    // Which way the user is telling this entity to go
+    pub direction_input: Direction,
+    // Direction in radians
+    pub direction: f32,
+    // pixels/tick
+    pub speed: f32,
     pub size: u16,
 }
 
-impl BaseEntity {
-    pub fn new(x: f64, y: f64, direction: Direction, size: u16) -> Self {
-        BaseEntity {
+impl PlayerEntity {
+    pub fn new(x: f32, y: f32, size: u16) -> Self {
+        PlayerEntity {
             color: Rgb::new(
                 (math_random() * 255.) as u8,
                 (math_random() * 255.) as u8,
@@ -43,13 +49,15 @@ impl BaseEntity {
             ),
             x,
             y,
-            direction,
+            direction_input: Direction::STOP,
+            direction: 0.,
+            speed: 0.,
             size,
         }
     }
 }
 
-impl Entity for BaseEntity {
+impl Entity for PlayerEntity {
     fn render(&self) {
         render_quad(
             self.color.red,
@@ -63,14 +71,6 @@ impl Entity for BaseEntity {
     }
 
     fn tick(&mut self, tick: usize) {
-        match self.direction {
-            Direction::DOWN => self.y += 0.1,
-            Direction::LEFT => self.x -= 0.1,
-            Direction::RIGHT => self.x += 0.1,
-            Direction::UP => self.y -= 0.1,
-            Direction::STOP => (),
-        };
-
         if tick % 120 == 0 {
             let effect = DemoCircleEffect {
                 color: Color::random(),
@@ -87,9 +87,10 @@ impl Entity for BaseEntity {
     }
 
     fn apply_update(&mut self, update: &ServerMessageContent) {
-        match update {
-            ServerMessageContent::movement_direction(direction) => self.direction = *direction,
-            _ => error("Unexpected server message type received in entity update handler!"),
-        }
+        unimplemented!()
+        // match update {
+        //     ServerMessageContent::movement_direction(direction) => self.direction = *direction,
+        //     _ => error("Unexpected server message type received in entity update handler!"),
+        // }
     }
 }

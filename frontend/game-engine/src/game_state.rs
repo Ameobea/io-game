@@ -7,6 +7,7 @@ use std::ptr;
 use uuid::Uuid;
 
 use entity::Entity;
+use game::PlayerEntity;
 use proto_utils::ServerMessageContent;
 use protos::server_messages::{
     CreationEvent_oneof_entity as EntityType, StatusUpdate,
@@ -79,7 +80,7 @@ impl GameState {
                 };
 
                 entity.apply_update(update)
-            }
+            },
         }
     }
 
@@ -95,16 +96,11 @@ impl GameState {
         self.cur_tick
     }
 
-    fn create_entity(&mut self, entity: &EntityType, entity_id: Uuid, pos_x: f64, pos_y: f64) {
+    fn create_entity(&mut self, entity: &EntityType, entity_id: Uuid, pos_x: f32, pos_y: f32) {
         match entity {
             EntityType::player(player) => {
                 log("Creating entity...");
-                let entity = ::game::BaseEntity::new(
-                    pos_x,
-                    pos_y,
-                    player.get_direction(),
-                    player.get_size() as u16,
-                );
+                let entity = PlayerEntity::new(pos_x, pos_y, player.get_size() as u16);
                 match self.entity_map.insert(entity_id, box entity) {
                     Some(_) => error(format!(
                         "While creating an entity, an old entity existed with the id {}!",

@@ -60,3 +60,16 @@ impl Color {
         Color { red, green, blue }
     }
 }
+
+pub struct VelocityVector {
+    /// Angle of movement in radians
+    pub direction: f32,
+    /// Speed in pixels/second
+    pub speed: f32,
+}
+
+impl VelocityVector {
+    pub fn new(direction: f32, speed: f32) -> Self {
+        VelocityVector { speed, direction }
+    }
+}

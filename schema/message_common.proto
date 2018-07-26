@@ -7,8 +7,12 @@ message Uuid {
 
 enum MovementDirection {
   UP = 0;
-  RIGHT = 1;
-  DOWN = 2;
-  LEFT = 3;
-  STOP = 4;
+  UP_RIGHT = 1;
+  RIGHT = 2;
+  DOWN_RIGHT = 3;
+  DOWN = 4;
+  DOWN_LEFT = 5
+  LEFT = 6;
+  UP_LEFT = 7;
+  STOP = 8;
 }

@@ -1,0 +1,13 @@
+pub struct Conf {
+    physics: PhysicsConf,
+}
+
+pub struct PhysicsConf {
+    acceleration_per_tick: f32,
+}
+
+pub const CONF: Conf = Conf {
+    physics: PhysicsConf {
+        acceleration_per_tick: {{ f32 physics-accelerationPerTick }},
+    },
+};

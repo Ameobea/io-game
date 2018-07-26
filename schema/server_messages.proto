@@ -8,8 +8,8 @@ message PlayerEntity {
 }
 
 message CreationEvent {
-  double pos_x = 1;
-  double pos_y = 2;
+  float pos_x = 1;
+  float pos_y = 2;
   oneof entity {
     PlayerEntity player = 3;
   }
