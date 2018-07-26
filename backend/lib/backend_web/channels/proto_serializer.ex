@@ -27,7 +27,6 @@ defmodule BackendWeb.ProtoSerializer do
 
   def decode!(message, _opts) do
     message
-    |> Poison.decode!()
-    |> Phoenix.Socket.Message.from_map!()
+    |> Backend.ProtoMessage.ClientMessage.decode(client_message)
   end
 end
