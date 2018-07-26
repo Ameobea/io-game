@@ -8,7 +8,10 @@ message ConnectMessage {
 
 message ClientMessage {
   oneof payload {
-    ConnectMessage connect = 2;
-    MovementDirection player_move = 3;
+    ConnectMessage connect = 1;
+    MovementDirection player_move = 2;
   }
+  string topic = 3;
+  string event = 4;
+  string ref = 5;
 }
