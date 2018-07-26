@@ -7,11 +7,15 @@
 )]
 
 extern crate protobuf;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate uuid;
 extern crate wasm_bindgen;
 
 use std::panic;
 
+use protobuf::parse_from_bytes;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
@@ -31,7 +35,7 @@ use self::proto_utils::{
 use self::protos::message_common::MovementDirection;
 use self::protos::server_messages::{
     CreationEvent, CreationEvent_oneof_entity as EntityType, PlayerEntity, ServerMessage,
-    StatusUpdate, StatusUpdate_oneof_payload as Status,
+    SocketMessage, StatusUpdate, StatusUpdate_oneof_payload as Status,
 };
 use render_effects::RenderEffectManager;
 use util::error;
@@ -133,6 +137,17 @@ pub fn tick() {
 }
 
 #[wasm_bindgen]
-pub fn decode_socket_message(bytes: &[u8]) -> Option<String> {
-    parse_socket_message(bytes)
+pub fn decode_socket_message(bytes: &[u8]) -> JsValue {
+    let mut socket_msg: SocketMessage = match parse_from_bytes(bytes) {
+        Ok(msg) => msg,
+        Err(err) => {
+            error(format!("Error parsing socket message: {:?}", err));
+            return JsValue::null();
+        }
+    };
+
+    match parse_socket_message(&mut socket_msg) {
+        Some(data) => JsValue::from_serde(&data).expect("Error parsing socket data into JSON!"),
+        None => JsValue::null(),
+    }
 }

@@ -99,27 +99,25 @@ pub fn send_user_message(payload: ClientMessageContent) {
     send_message(bytes);
 }
 
-pub fn parse_socket_message(bytes: &[u8]) -> Option<String> {
-    let mut socket_msg: SocketMessage = match parse_from_bytes(bytes) {
-        Ok(msg) => msg,
-        Err(err) => {
-            error(format!("Error parsing socket message: {:?}", err));
-            return None;
-        }
-    };
+#[derive(Serialize)]
+pub struct SocketMessageData<'a> {
+    pub topic: &'a str,
+    pub event: &'a str,
+    pub status: Option<String>,
+    #[serde(rename = "ref")]
+    pub _ref: &'a str,
+}
 
-    let status = socket_msg
-        .payload
-        .take()
-        .map(|payload| payload.status)
-        .unwrap_or_else(|| "".into());
+pub fn parse_socket_message<'a>(
+    socket_msg: &'a mut SocketMessage,
+) -> Option<SocketMessageData<'a>> {
+    let status = socket_msg.payload.take().map(|payload| payload.status);
 
-    let joined = [
-        socket_msg.get_topic().into(),
-        socket_msg.get_event().into(),
+    let data = SocketMessageData {
+        topic: socket_msg.get_topic().into(),
+        event: socket_msg.get_event().into(),
         status,
-        socket_msg.get_field_ref().into(),
-    ].join("\n");
-
-    Some(joined)
+        _ref: socket_msg.get_field_ref().into(),
+    };
+    Some(data)
 }

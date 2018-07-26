@@ -32,7 +32,7 @@ const setRawMessageHandler = (engine: typeof import('./game_engine')) => {
       // Message was a game message and was handled by the game engine
       return;
     }
-    let [topic, event, status, ref] = msg.split('\n');
+    let { topic, event, status, ref } = msg;
 
     this.log(`receive: ${status || ''} ${topic} ${event} ${(ref && '(' + ref + ')') || ''}`);
     this.channels

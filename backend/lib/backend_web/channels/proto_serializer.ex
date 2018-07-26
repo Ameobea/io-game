@@ -20,6 +20,7 @@ defmodule BackendWeb.ProtoSerializer do
       payload: %{status: reply.status, response: reply.payload}
     })}
   end
+
   def encode!(%Message{} = msg) do
     {:socket_push, :text, Backend.ProtoMessage.encode_socket_message(msg)}
   end
