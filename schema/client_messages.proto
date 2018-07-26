@@ -11,7 +11,11 @@ message ClientMessage {
     ConnectMessage connect = 1;
     MovementDirection player_move = 2;
   }
-  string topic = 3;
-  string event = 4;
-  string ref = 5;
+}
+
+message ClientMessageWrapper {
+  string topic = 1;
+  string event = 2;
+  string ref = 3;
+  bytes payload = 4;
 }
