@@ -105,6 +105,6 @@ pub fn send_user_message(payload: ClientMessageContent) {
     };
 
     let mut event = Event::new();
-    event.set_custom_event("idk_what_to_put_here...".into());
+    event.set_custom_event(CONF.network.custom_event_name.into());
     send_channel_message(CONF.network.game_channel_name, event, client_msg_bytes);
 }

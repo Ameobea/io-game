@@ -13,6 +13,7 @@ pub struct NetworkConf {
     pub phoenix_transport_version: &'static str,
     pub game_channel_name: &'static str,
     pub phoenix_tag: &'static str,
+    pub custom_event_name: &'static str,
 }
 
 pub const CONF: Conf = Conf {
@@ -25,5 +26,6 @@ pub const CONF: Conf = Conf {
         phoenix_transport_version: "{{ network-phoenixTransportVersion }}",
         game_channel_name: "{{ network-gameChannelName }}",
         phoenix_tag: "{{ network-phoenixTag }}",
+        custom_event_name: "{{ network-customEventName }}",
     }
 };

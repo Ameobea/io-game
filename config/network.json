@@ -2,5 +2,6 @@
   "websocketUrl": "ws://localhost:4000/socket",
   "phoenixTransportVersion": "1.0.0",
   "phoenixTag": "game",
-  "gameChannelName": "rooms:game"
+  "gameChannelName": "rooms:game",
+  "customEventName": "game"
 }
