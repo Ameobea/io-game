@@ -41,5 +41,5 @@ defmodule BackendWeb.ProtoSerializer do
   defp decode_event(%Backend.ProtoMessage.Event{payload: {:phoenix_event, event_name}}) do
     "phx_" <> (event_name |> Atom.to_string |> String.downcase)
   end
-  defp decode_event(_other), do: nil
+  defp decode_event(other_event), do: other_event
 end
