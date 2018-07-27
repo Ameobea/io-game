@@ -3,12 +3,13 @@ use std::mem;
 use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
 
-use super::send_message;
+use phoenix_proto::send_channel_message;
+use protos::channel_messages::Event;
 use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::Uuid as ProtoUuid;
 use protos::server_messages::ServerMessage;
 pub use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
-use util::{error, log, warn};
+use util::{error, warn};
 
 pub struct InnerServerMessage {
     pub id: Uuid,
@@ -91,8 +92,18 @@ pub fn msg_to_bytes<M: Message>(msg: M) -> Vec<u8> {
 pub fn send_user_message(payload: ClientMessageContent) {
     let mut client_msg = ClientMessage::new();
     client_msg.payload = Some(payload);
+    let client_msg_bytes = match client_msg.write_to_bytes() {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            error(format!(
+                "Error while writing `ClientMessage` to bytes: {:?}",
+                err
+            ));
+            return;
+        }
+    };
 
-    let bytes = msg_to_bytes(client_msg);
-    log(format!("Sending user message: {:?}", bytes));
-    send_message(bytes);
+    let mut event = Event::new();
+    event.set_custom_event("idk_what_to_put_here...".into());
+    send_channel_message("game", event, client_msg_bytes);
 }

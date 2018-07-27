@@ -8,7 +8,7 @@ use protos::channel_messages::{
 use protos::server_messages::ServerMessage;
 
 use conf::CONF;
-use util::{error, warn};
+use util::{error, log, warn};
 
 static mut CUR_REF: usize = 1;
 
@@ -27,7 +27,10 @@ pub fn send_channel_message<S: Into<String>>(topic: S, event: Event, payload: Ve
     msg.set_field_ref(format!("{}", inc_ref()));
 
     match msg.write_to_bytes() {
-        Ok(bytes) => send_message(bytes),
+        Ok(bytes) => {
+            log(format!("Sending `ChannelMessage`: {:?}", bytes));
+            send_message(bytes);
+        }
         Err(err) => error(format!(
             "Error while converting `ChannelMessage` to bytes: {:?}",
             err
