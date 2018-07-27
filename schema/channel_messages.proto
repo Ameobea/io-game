@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+enum PhoenixEvent {
+  Join = 1;
+  Close = 2;
+  Reply = 3;
+  Heartbeat = 4;
+}
+
+message Event {
+  oneof payload {
+    PhoenixEvent phoenix_event = 1;
+    string custom_event = 2;
+  }
+}
+
+message ChannelMessage {
+  string topic = 1;
+  Event event = 2;
+  string ref = 3;
+  string join_ref = 4;
+  bytes payload = 5;
+}

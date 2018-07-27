@@ -21,6 +21,7 @@ fn main() {
             "../../schema/message_common.proto",
             "../../schema/server_messages.proto",
             "../../schema/client_messages.proto",
+            "../../schema/channel_messages.proto",
         ],
         includes: &["../../schema"],
         customize: protobuf_codegen_pure::Customize {
@@ -28,6 +29,8 @@ fn main() {
         },
     }).expect("Protobuf codegen error");
 
+    println!("rerun-if-changed=../../schema");
+    println!("rerun-if-changed=../../config");
     build_config();
 }
 
@@ -98,6 +101,7 @@ fn build_config() {
     let out_file = out_dir.join(Path::new("mod.rs"));
 
     let physics_conf = parse_config_file(include_str!("../../config/physics.json"));
+    let network_conf = parse_config_file(include_str!("../../config/network.json"));
 
     match fs::create_dir(out_dir) {
         Ok(_) => (),
@@ -120,7 +124,10 @@ fn build_config() {
     hbs.register_template_string(TEMPLATE_NAME, template_src)
         .expect("Unable to register template string!");
 
-    let mut all_configs = vec![parse_map(physics_conf, "physics")];
+    let mut all_configs = vec![
+        parse_map(physics_conf, "physics"),
+        parse_map(network_conf, "network"),
+    ];
     let template_data: HashMap<String, Value> =
         all_configs.drain(..).fold(HashMap::new(), merge_hashmap);
     if let Err(err) = hbs.render_to_write(TEMPLATE_NAME, &template_data, output_file) {

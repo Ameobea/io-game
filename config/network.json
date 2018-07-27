@@ -1,0 +1,6 @@
+{
+  "websocketUrl": "ws://localhost:4000/socket",
+  "phoenixTransportVersion": "1.0.0",
+  "phoenixTag": "game",
+  "gameChannelName": "game"
+}

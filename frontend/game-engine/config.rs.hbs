@@ -1,5 +1,6 @@
 pub struct Conf {
     pub physics: PhysicsConf,
+    pub network: NetworkConf,
 }
 
 pub struct PhysicsConf {
@@ -7,9 +8,22 @@ pub struct PhysicsConf {
     pub max_player_speed: f32,
 }
 
+pub struct NetworkConf {
+    pub websocket_url: &'static str,
+    pub phoenix_transport_version: &'static str,
+    pub game_channel_name: &'static str,
+    pub phoenix_tag: &'static str,
+}
+
 pub const CONF: Conf = Conf {
     physics: PhysicsConf {
         acceleration_per_tick: {{ f32 physics-accelerationPerTick }},
         max_player_speed: {{ f32 physics-maxPlayerSpeed }},
     },
+    network: NetworkConf {
+        websocket_url: "{{ network-websocketUrl }}",
+        phoenix_transport_version: "{{ network-phoenixTransportVersion }}",
+        game_channel_name: "{{ network-gameChannelName }}",
+        phoenix_tag: "{{ network-phoenixTag }}",
+    }
 };

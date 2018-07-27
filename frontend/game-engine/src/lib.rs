@@ -23,18 +23,18 @@ pub mod conf;
 pub mod entity;
 pub mod game;
 pub mod game_state;
+pub mod phoenix_proto;
 pub mod proto_utils;
 pub mod protos;
 pub mod render_effects;
 pub mod user_input;
 pub mod util;
 
-use self::game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
-use self::proto_utils::{
-    msg_to_bytes, parse_server_message, parse_socket_message, InnerServerMessage,
-};
-use self::protos::message_common::MovementDirection as Direction;
-use self::protos::server_messages::{
+use game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
+use phoenix_proto::join_game_channel;
+use proto_utils::{msg_to_bytes, parse_server_message, parse_socket_message, InnerServerMessage};
+use protos::message_common::MovementDirection as Direction;
+use protos::server_messages::{
     CreationEvent, CreationEvent_oneof_entity as EntityType, MovementUpdate, PlayerEntity,
     ServerMessage, SocketMessage, StatusUpdate, StatusUpdate_oneof_payload as Status,
 };
@@ -72,6 +72,8 @@ pub fn init() {
 
     let effects_manager = box RenderEffectManager::new();
     unsafe { EFFECTS_MANAGER = Box::into_raw(effects_manager) };
+
+    join_game_channel();
 }
 
 #[wasm_bindgen]
@@ -156,11 +158,6 @@ pub fn decode_socket_message(bytes: &[u8]) -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn generate_client_message_wrapper(
-    _topic: &str,
-    _event: &str,
-    _payload: &[u8],
-    _ref: String,
-) -> Vec<u8> {
-    unimplemented!();
+pub fn handle_channel_message(bytes: &[u8]) {
+    phoenix_proto::handle_server_msg(bytes)
 }

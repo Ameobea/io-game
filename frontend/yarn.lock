@@ -2812,10 +2812,6 @@ pbkdf2@^3.0.3:
     safe-buffer "^5.0.1"
     sha.js "^2.4.8"
 
-phoenix-socket@^1.2.3:
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/phoenix-socket/-/phoenix-socket-1.2.3.tgz#90d4d96e39961d82f72c255f9150e9afd623d41f"
-
 pify@^2.0.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/pify/-/pify-2.3.0.tgz#ed141a6ac043a849ea588498e7dca8b15330e90c"

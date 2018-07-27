@@ -21,7 +21,6 @@
     "build": "rm -rf dist/* && webpack --config webpack.prod.js"
   },
   "dependencies": {
-    "@types/html-webpack-plugin": "^2.30.4",
-    "phoenix-socket": "^1.2.3"
+    "@types/html-webpack-plugin": "^2.30.4"
   }
 }
