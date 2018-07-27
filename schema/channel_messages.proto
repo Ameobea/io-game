@@ -3,8 +3,9 @@ syntax = "proto3";
 enum PhoenixEvent {
   Join = 1;
   Close = 2;
-  Reply = 3;
-  Heartbeat = 4;
+  Error = 3;
+  Reply = 4;
+  Leave = 5;
 }
 
 message Event {

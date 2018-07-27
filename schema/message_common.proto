@@ -11,7 +11,7 @@ enum MovementDirection {
   RIGHT = 2;
   DOWN_RIGHT = 3;
   DOWN = 4;
-  DOWN_LEFT = 5
+  DOWN_LEFT = 5;
   LEFT = 6;
   UP_LEFT = 7;
   STOP = 8;
