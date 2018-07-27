@@ -25,13 +25,15 @@ gameSocket.onerror = evt => console.error('WebSocket error:', evt);
 
 gameSocket.onopen = () => continueInit();
 
-export const initEventHandlers = (engine: typeof import('./game_engine')) => {
-  canvas.addEventListener('mousedown', evt => engine.handle_mouse_down(evt.x, evt.y));
-  canvas.addEventListener('mouseup', evt => engine.handle_mouse_up(evt.x, evt.y));
-  canvas.addEventListener('mousemove', evt => engine.handle_mouse_move(evt.x, evt.y));
+const body = document.getElementsByTagName('body')[0];
 
-  document.addEventListener('keydown', evt => engine.handle_key_down(evt.keyCode));
-  document.addEventListener('keyup', evt => engine.handle_key_up(evt.keyCode));
+export const initEventHandlers = (engine: typeof import('./game_engine')) => {
+  body.onmousedown = evt => engine.handle_mouse_down(evt.x, evt.y);
+  body.onmouseup = evt => engine.handle_mouse_up(evt.x, evt.y);
+  body.onmousemove = evt => engine.handle_mouse_move(evt.x, evt.y);
+
+  body.onkeydown = evt => engine.handle_key_down(evt.keyCode);
+  body.onkeyup = evt => engine.handle_key_up(evt.keyCode);
 };
 
 export const send_message = (message: Uint8Array) =>

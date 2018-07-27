@@ -1,11 +1,11 @@
-use game::effects::DemoCircleEffect;
-use util::Color;
 use wasm_bindgen::prelude::*;
 
+use game::effects::DemoCircleEffect;
 use game_state::{get_cur_held_keys, get_effects_manager};
 use proto_utils::send_user_message;
 use protos::client_messages::ClientMessage_oneof_payload as ClientMessageContent;
 use protos::message_common::MovementDirection;
+use util::{log, Color};
 
 #[wasm_bindgen]
 pub fn handle_mouse_down(x: u16, y: u16) {
@@ -97,6 +97,7 @@ fn send_movement_msg(direction: MovementDirection) {
 
 #[wasm_bindgen]
 pub fn handle_key_down(code: usize) {
+    log(format!("Handling key down: {}", code));
     let movement_direction = match code {
         87 => MovementDirection::UP,
         83 => MovementDirection::DOWN,
@@ -108,6 +109,7 @@ pub fn handle_key_down(code: usize) {
     };
 
     if !get_cur_held_keys().is_pressed(code) {
+        log("Current pressed key is not already held; sending movement message...");
         send_movement_msg(movement_direction);
     }
     get_cur_held_keys().set_down(code);
