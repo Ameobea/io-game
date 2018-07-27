@@ -5,7 +5,7 @@ defmodule BackendWeb.ProtoSerializer do
   alias Phoenix.Socket.{Reply, Message, Broadcast}
 
   def fastlane!(%Broadcast{} = msg) do
-    {:socket_push, :text, Backend.ProtoMessage.encode_socket_message(%Message{
+    {:socket_push, :binary, Backend.ProtoMessage.encode_socket_message(%Message{
       topic: msg.topic,
       event: msg.event,
       payload: msg.payload
@@ -13,7 +13,7 @@ defmodule BackendWeb.ProtoSerializer do
   end
 
   def encode!(%Reply{} = reply) do
-    {:socket_push, :text, Backend.ProtoMessage.encode_socket_message(%Message{
+    {:socket_push, :binary, Backend.ProtoMessage.encode_socket_message(%Message{
       topic: reply.topic,
       event: "phx_reply",
       ref: reply.ref,
@@ -22,7 +22,7 @@ defmodule BackendWeb.ProtoSerializer do
   end
 
   def encode!(%Message{} = msg) do
-    {:socket_push, :text, Backend.ProtoMessage.encode_socket_message(msg)}
+    {:socket_push, :binary, Backend.ProtoMessage.encode_socket_message(msg)}
   end
 
   def decode!(message, _opts) do

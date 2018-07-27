@@ -9,13 +9,16 @@ const canvas = getCanvas();
 
 const gameSocket = new WebSocket('ws://localhost:4000/socket/websocket?vsn=1.0.0');
 
+gameSocket.binaryType = 'arraybuffer';
+
 gameSocket.onmessage = evt => {
   if (!(evt.data instanceof ArrayBuffer)) {
-    console.error(`Received non-text message from websocket: ${evt.data}`);
+    console.error(`Received non-binary message from websocket: ${evt.data}`);
     return;
   }
 
   const data = evt.data as ArrayBuffer;
+  handleWsMsg(data);
 };
 
 gameSocket.onerror = evt => console.error('WebSocket error:', evt);
@@ -31,4 +34,5 @@ export const initEventHandlers = (engine: typeof import('./game_engine')) => {
   document.addEventListener('keyup', evt => engine.handle_key_up(evt.keyCode));
 };
 
-export const send_message = (message: Uint8Array) => () => gameSocket.send(message);
+export const send_message = (message: Uint8Array) =>
+  console.log(message) || gameSocket.send(message);

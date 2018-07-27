@@ -41,11 +41,7 @@ pub fn send_channel_message<S: Into<String>>(topic: S, event: Event, payload: Ve
 pub fn join_game_channel() {
     let mut evt = Event::new();
     evt.set_phoenix_event(PhoenixEvent::Join);
-    send_channel_message(
-        format!("rooms:{}", CONF.network.phoenix_tag),
-        evt,
-        Vec::new(),
-    );
+    send_channel_message(CONF.network.game_channel_name, evt, Vec::new());
 }
 
 fn warn_msg(msg_type: &str, topic: &str, payload: &[u8]) {
@@ -79,7 +75,7 @@ pub fn handle_server_msg(bytes: &[u8]) {
             Some(EventPayload::custom_event(evt)) => match evt {
                 _ => {
                     warn_msg(&evt, &topic, &payload);
-                    // Try to parse the binary payload into a `ServerMessage`
+                    log("Trying to parse the binary payload into a `ServerMessage`...");
                     let server_msg: ServerMessage = match parse_from_bytes(&payload) {
                         Ok(msg) => msg,
                         Err(err) => {

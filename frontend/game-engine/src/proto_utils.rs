@@ -3,6 +3,7 @@ use std::mem;
 use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
 
+use conf::CONF;
 use phoenix_proto::send_channel_message;
 use protos::channel_messages::Event;
 use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
@@ -105,5 +106,5 @@ pub fn send_user_message(payload: ClientMessageContent) {
 
     let mut event = Event::new();
     event.set_custom_event("idk_what_to_put_here...".into());
-    send_channel_message("game", event, client_msg_bytes);
+    send_channel_message(CONF.network.game_channel_name, event, client_msg_bytes);
 }

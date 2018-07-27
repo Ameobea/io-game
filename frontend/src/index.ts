@@ -25,7 +25,7 @@ wasm
     // code panics.
     engine.init();
     initEventHandlers(engine);
-    handleWsMsg = (ab: ArrayBuffer) => engine.handle_message(new Uint8Array(ab));
+    handleWsMsg = (ab: ArrayBuffer) => engine.handle_channel_message(new Uint8Array(ab));
 
     const tick = () => {
       clearCanvas();
