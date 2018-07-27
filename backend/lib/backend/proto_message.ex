@@ -55,4 +55,8 @@ defmodule Backend.ProtoMessage do
     phx_event = PhoenixEvent.value(event |> String.capitalize |> String.to_atom)
     Event.new(%{payload: {:phoenix_event, phx_event} })
   end
+
+  defp encode_event(other_event) do
+    Event.new(%{payload: {:custom_event, other_event} })
+  end
 end
