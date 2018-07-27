@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+import "server_messages.proto";
+import "client_messages.proto";
+
 enum PhoenixEvent {
   Join = 1;
   Close = 2;
@@ -15,10 +18,18 @@ message Event {
   }
 }
 
-message ChannelMessage {
+message ServerChannelMessage {
   string topic = 1;
   Event event = 2;
   string ref = 3;
   string join_ref = 4;
-  bytes payload = 5;
+  ServerMessage payload = 5;
+}
+
+message ClientChannelMessage {
+  string topic = 1;
+  Event event = 2;
+  string ref = 3;
+  string join_ref = 4;
+  ClientMessage payload = 5;
 }

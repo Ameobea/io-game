@@ -46,6 +46,7 @@ extern "C" {
         endAngle: f64,
         counterClockwise: bool,
     );
+    pub fn render_line(x1: u16, y1: u16, x2: u16, y2: u16);
 }
 
 #[wasm_bindgen(module = "./inputWrapper")]

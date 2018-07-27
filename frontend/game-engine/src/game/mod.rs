@@ -1,6 +1,6 @@
 //! Contains implementation-specific code that is not generic for the engine.
 
-use super::render_quad;
+use super::{render_line, render_quad};
 use conf::CONF;
 use entity::Entity;
 use game_state::get_effects_manager;
@@ -8,7 +8,7 @@ use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::{
     MovementUpdate, ServerMessage_oneof_payload as ServerMessageContent,
 };
-use util::{error, log, math_random, Color};
+use util::{error, log, magnitude, math_random, Color};
 
 pub mod effects;
 
@@ -39,6 +39,10 @@ pub struct PlayerEntity {
     /// Speed along the y axis in pixels/tick
     pub velocity_y: f32,
     pub size: u16,
+    /// X component of a normalized vector that represents the direction that the beam is pointing
+    pub beam_rotation_x: f32,
+    /// Y component of a normalized vector that represents the direction that the beam is pointing
+    pub beam_rotation_y: f32,
 }
 
 impl PlayerEntity {
@@ -55,6 +59,8 @@ impl PlayerEntity {
             velocity_x: 0.,
             velocity_y: 0.,
             size,
+            beam_rotation_x: 1.,
+            beam_rotation_y: 0.,
         }
     }
 
@@ -104,10 +110,25 @@ impl PlayerEntity {
         self.pos_x *= 1. - CONF.physics.friction_per_tick;
         self.pos_y *= 1. - CONF.physics.friction_per_tick;
     }
+
+    pub fn update_beam(&mut self, mouse_x: u16, mouse_y: u16) -> (f32, f32) {
+        let (v_x, v_y) = (mouse_x as f32 - self.pos_x, mouse_y as f32 - self.pos_y);
+        let mouse_vector_magnitude = magnitude(v_x, v_y);
+
+        let (norm_v_x, norm_v_y) = (
+            v_x as f32 / mouse_vector_magnitude,
+            v_y as f32 / mouse_vector_magnitude,
+        );
+        self.beam_rotation_x = norm_v_x;
+        self.beam_rotation_y = norm_v_y;
+
+        (norm_v_x, norm_v_y)
+    }
 }
 
 impl Entity for PlayerEntity {
     fn render(&self) {
+        // Draw entity body
         render_quad(
             self.color.red,
             self.color.green,
@@ -116,6 +137,19 @@ impl Entity for PlayerEntity {
             self.pos_y as u16,
             self.size,
             self.size,
+        );
+
+        let beam_len: f32 = 25.;
+        let (beam_vec_x, beam_vec_y) = (
+            self.beam_rotation_x * beam_len,
+            self.beam_rotation_y * beam_len,
+        );
+        // Draw beam
+        render_line(
+            self.pos_x as u16,
+            self.pos_y as u16,
+            (self.pos_x + beam_vec_x) as u16,
+            (self.pos_y + beam_vec_y) as u16,
         );
     }
 

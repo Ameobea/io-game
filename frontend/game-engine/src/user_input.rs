@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 use game::effects::DemoCircleEffect;
 use game_state::{get_cur_held_keys, get_effects_manager, player_entity_fastpath};
 use proto_utils::send_user_message;
-use protos::client_messages::ClientMessage_oneof_payload as ClientMessageContent;
+use protos::client_messages::{BeamRotation, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::MovementDirection as Direction;
 use util::Color;
 
@@ -21,6 +21,10 @@ pub fn handle_mouse_down(x: u16, y: u16) {
         increment: 1.,
     };
     get_effects_manager().add_effect(box effect);
+
+    // Send a "beam on" message to the server
+    let payload = ClientMessageContent::beam_toggle(true);
+    send_user_message(payload);
 }
 
 #[wasm_bindgen]
@@ -35,10 +39,24 @@ pub fn handle_mouse_move(x: u16, y: u16) {
         increment: 0.75,
     };
     get_effects_manager().add_effect(box effect);
+
+    // Update the beam direction locally
+    let (beam_rotation_x, beam_rotation_y) = player_entity_fastpath().update_beam(x, y);
+
+    // Send a beam direction update message to the server
+    let mut rotation = BeamRotation::new();
+    rotation.set_beam_vec_x(beam_rotation_x);
+    rotation.set_beam_vec_y(beam_rotation_y);
+    let payload = ClientMessageContent::beam_rotation(rotation);
+    send_user_message(payload);
 }
 
 #[wasm_bindgen]
-pub fn handle_mouse_up(_x: u16, _y: u16) {}
+pub fn handle_mouse_up(_x: u16, _y: u16) {
+    // Send a "beam off" message to the server
+    let payload = ClientMessageContent::beam_toggle(false);
+    send_user_message(payload);
+}
 
 pub struct CurHeldKeys {
     w: bool,

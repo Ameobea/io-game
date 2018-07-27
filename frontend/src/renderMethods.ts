@@ -48,3 +48,10 @@ export const render_arc = (
   ctx.arc(x, y, radius, startAngle, endAngle, counterClockwise);
   ctx.stroke();
 };
+
+export const render_line = (x1: number, y1: number, x2: number, y2: number) => {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+};

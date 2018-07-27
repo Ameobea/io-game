@@ -36,5 +36,4 @@ export const initEventHandlers = (engine: typeof import('./game_engine')) => {
   body.onkeyup = evt => engine.handle_key_up(evt.keyCode);
 };
 
-export const send_message = (message: Uint8Array) =>
-  console.log(message) || gameSocket.send(message);
+export const send_message = (message: Uint8Array) => gameSocket.send(message);

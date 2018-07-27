@@ -61,15 +61,8 @@ impl Color {
     }
 }
 
-pub struct VelocityVector {
-    /// Angle of movement in radians
-    pub direction: f32,
-    /// Speed in pixels/second
-    pub speed: f32,
-}
-
-impl VelocityVector {
-    pub fn new(direction: f32, speed: f32) -> Self {
-        VelocityVector { speed, direction }
-    }
+/// Returns the magnitude of a 2D vector
+pub fn magnitude(x: f32, y: f32) -> f32 {
+    let sum = (x * x) + (y * y);
+    sum.sqrt()
 }

@@ -93,18 +93,8 @@ pub fn msg_to_bytes<M: Message>(msg: M) -> Vec<u8> {
 pub fn send_user_message(payload: ClientMessageContent) {
     let mut client_msg = ClientMessage::new();
     client_msg.payload = Some(payload);
-    let client_msg_bytes = match client_msg.write_to_bytes() {
-        Ok(bytes) => bytes,
-        Err(err) => {
-            error(format!(
-                "Error while writing `ClientMessage` to bytes: {:?}",
-                err
-            ));
-            return;
-        }
-    };
 
     let mut event = Event::new();
     event.set_custom_event(CONF.network.custom_event_name.into());
-    send_channel_message(CONF.network.game_channel_name, event, client_msg_bytes);
+    send_channel_message(CONF.network.game_channel_name, event, Some(client_msg));
 }

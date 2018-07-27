@@ -9,15 +9,16 @@ defmodule Backend.ProtoMessage do
     Uuid,
     Event,
     PhoenixEvent,
-    ChannelMessage,
+    ServerChannelMessage,
   }
 
   def encode_socket_message(%Phoenix.Socket.Message{} = message) do
-    ChannelMessage.encode(ChannelMessage.new(%{
+    IO.inspect(message.payload)
+    ServerChannelMessage.encode(ServerChannelMessage.new(%{
       topic: message.topic,
       event: encode_event(message.event),
       ref: message.ref,
-      payload: encode_payload(message.payload),
+      payload: ServerMessage.new(message.payload),
     }))
   end
 
@@ -43,10 +44,6 @@ defmodule Backend.ProtoMessage do
 
     Uuid.new(%{data_1: part1, data_2: part2})
   end
-
-  defp encode_payload(nil), do: nil
-  defp encode_payload(%{}), do: nil
-  defp encode_payload(server_message), do: ServerMessage.encode(server_message)
 
   defp encode_event("phx_" <> event) do
     phx_event = PhoenixEvent.value(event |> String.capitalize |> String.to_atom)
