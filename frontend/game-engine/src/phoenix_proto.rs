@@ -53,8 +53,8 @@ pub fn handle_server_msg(bytes: &[u8]) {
     let ChannelMessage {
         topic,
         event,
-        field_ref,
-        join_ref,
+        field_ref: _,
+        join_ref: _,
         payload,
         ..
     } = match parse_from_bytes(bytes) {

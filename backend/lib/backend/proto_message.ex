@@ -7,14 +7,15 @@ defmodule Backend.ProtoMessage do
     StatusUpdate,
     ServerMessage,
     Uuid,
-    SocketMessage,
     Payload,
+    Event,
+    ChannelMessage,
   }
 
   def encode_socket_message(%Phoenix.Socket.Message{} = message) do
-    SocketMessage.encode(SocketMessage.new(%{
+    ChannelMessage.encode(ChannelMessage.new(%{
       topic: message.topic,
-      event: message.event,
+      event: Event.new(%{:})
       ref: message.ref,
       payload: encode_payload(message.payload),
     }))
@@ -47,5 +48,10 @@ defmodule Backend.ProtoMessage do
   defp encode_payload(%{}), do: nil
   defp encode_payload(payload) do
     Payload.new(payload)
+  end
+
+  defp encode_event(evt) do
+    # Takes a string like "phs_join" and maps it to a protobuf `Event`
+    # https://github.com/mcampa/phoenix-channels/blob/b013df9a325c37c49e5b335fc63f18d85e95430d/src/constants.js#L13-L18
   end
 end

@@ -99,37 +99,3 @@ pub fn send_user_message(payload: ClientMessageContent) {
     log(format!("Sending user message: {:?}", bytes));
     send_message(bytes);
 }
-
-#[derive(Serialize)]
-pub struct SocketMessageData<'a> {
-    pub topic: &'a str,
-    pub event: &'a str,
-    pub status: Option<String>,
-    #[serde(rename = "ref")]
-    pub _ref: &'a str,
-}
-
-pub fn parse_socket_message<'a>(socket_msg: &'a mut SocketMessage) -> SocketMessageData<'a> {
-    let payload_opt = socket_msg.payload.take();
-    let status: Option<String> = if let Some(payload) = payload_opt {
-        let Payload {
-            status, response, ..
-        } = payload;
-        if response.is_some() {
-            if let Some(InnerServerMessage { id, content }) = response.unwrap().into() {
-                get_state().apply_msg(id, &content);
-            }
-        }
-
-        Some(status)
-    } else {
-        None
-    };
-
-    SocketMessageData {
-        topic: socket_msg.get_topic().into(),
-        event: socket_msg.get_event().into(),
-        status,
-        _ref: socket_msg.get_field_ref().into(),
-    }
-}

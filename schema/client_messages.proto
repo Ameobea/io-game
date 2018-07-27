@@ -12,10 +12,3 @@ message ClientMessage {
     MovementDirection player_move = 2;
   }
 }
-
-message ClientMessageWrapper {
-  string topic = 1;
-  string event = 2;
-  string ref = 3;
-  bytes payload = 4;
-}

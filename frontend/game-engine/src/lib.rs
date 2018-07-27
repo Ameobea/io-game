@@ -7,9 +7,6 @@
 )]
 
 extern crate protobuf;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
 extern crate uuid;
 extern crate wasm_bindgen;
 
@@ -32,11 +29,11 @@ pub mod util;
 
 use game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
 use phoenix_proto::join_game_channel;
-use proto_utils::{msg_to_bytes, parse_server_message, parse_socket_message, InnerServerMessage};
+use proto_utils::{msg_to_bytes, parse_server_message, InnerServerMessage};
 use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::{
     CreationEvent, CreationEvent_oneof_entity as EntityType, MovementUpdate, PlayerEntity,
-    ServerMessage, SocketMessage, StatusUpdate, StatusUpdate_oneof_payload as Status,
+    ServerMessage, StatusUpdate, StatusUpdate_oneof_payload as Status,
 };
 use render_effects::RenderEffectManager;
 use util::error;
@@ -141,20 +138,6 @@ pub fn temp_gen_server_message_2() -> Vec<u8> {
 pub fn tick() {
     let cur_tick = get_state().tick();
     get_effects_manager().render_all(cur_tick);
-}
-
-#[wasm_bindgen]
-pub fn decode_socket_message(bytes: &[u8]) -> JsValue {
-    let mut socket_msg: SocketMessage = match parse_from_bytes(bytes) {
-        Ok(msg) => msg,
-        Err(err) => {
-            error(format!("Error parsing socket message: {:?}", err));
-            return JsValue::null();
-        }
-    };
-
-    let parsed = parse_socket_message(&mut socket_msg);
-    JsValue::from_serde(&parsed).expect("Error parsing socket data into JSON!")
 }
 
 #[wasm_bindgen]
