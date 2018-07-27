@@ -4,13 +4,10 @@ use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
 
 use super::send_message;
-use game_state::get_state;
 use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::Uuid as ProtoUuid;
 use protos::server_messages::ServerMessage;
-pub use protos::server_messages::{
-    Payload, ServerMessage_oneof_payload as ServerMessageContent, SocketMessage,
-};
+pub use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
 use util::{error, log, warn};
 
 pub struct InnerServerMessage {

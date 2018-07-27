@@ -12,7 +12,6 @@ extern crate wasm_bindgen;
 
 use std::panic;
 
-use protobuf::parse_from_bytes;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
