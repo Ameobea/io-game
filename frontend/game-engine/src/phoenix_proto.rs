@@ -1,14 +1,16 @@
 use super::send_message;
+use conf::CONF;
 use game_state::get_state;
 use proto_utils::InnerServerMessage;
 use protobuf::{parse_from_bytes, Message};
 use protos::channel_messages::{
     ChannelMessage, Event, Event_oneof_payload as EventPayload, PhoenixEvent,
 };
+use protos::client_messages::{ClientMessage, ConnectMessage};
 use protos::server_messages::ServerMessage;
-
-use conf::CONF;
 use util::{error, log, warn};
+
+use uuid::Uuid;
 
 static mut CUR_REF: usize = 1;
 
@@ -38,10 +40,27 @@ pub fn send_channel_message<S: Into<String>>(topic: S, event: Event, payload: Ve
     }
 }
 
-pub fn join_game_channel() {
+pub fn send_connect_message() {
+    let mut connect_msg = ClientMessage::new();
+    let mut content = ConnectMessage::new();
+    content.set_username("Ameo".into());
+    connect_msg.set_connect(content);
+    let mut evt = Event::new();
+    evt.set_custom_event("game".into());
+    let payload = connect_msg
+        .write_to_bytes()
+        .expect("Unable to binary encode `ClientMessage` connect msg!");
+
+    send_channel_message(CONF.network.game_channel_name, evt, payload)
+}
+
+pub fn join_game_channel() -> Uuid {
     let mut evt = Event::new();
     evt.set_phoenix_event(PhoenixEvent::Join);
     send_channel_message(CONF.network.game_channel_name, evt, Vec::new());
+
+    // TODO: Get this from the reply (?)
+    Uuid::nil()
 }
 
 fn warn_msg(msg_type: &str, topic: &str, payload: &[u8]) {

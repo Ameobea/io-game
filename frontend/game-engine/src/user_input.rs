@@ -1,11 +1,13 @@
+use std::hint::unreachable_unchecked;
+
 use wasm_bindgen::prelude::*;
 
 use game::effects::DemoCircleEffect;
-use game_state::{get_cur_held_keys, get_effects_manager};
+use game_state::{get_cur_held_keys, get_effects_manager, player_entity_fastpath};
 use proto_utils::send_user_message;
 use protos::client_messages::ClientMessage_oneof_payload as ClientMessageContent;
-use protos::message_common::MovementDirection;
-use util::{log, Color};
+use protos::message_common::MovementDirection as Direction;
+use util::Color;
 
 #[wasm_bindgen]
 pub fn handle_mouse_down(x: u16, y: u16) {
@@ -55,70 +57,72 @@ impl CurHeldKeys {
         }
     }
 
-    pub fn set_down(&mut self, code: usize) {
+    pub fn set(&mut self, code: usize, down: bool) {
         match code {
-            87 => self.w = true,
-            83 => self.s = true,
-            68 => self.d = true,
-            65 => self.a = true,
+            87 => self.w = down,
+            83 => self.s = down,
+            68 => self.d = down,
+            65 => self.a = down,
             _ => (),
-        }
-    }
-
-    pub fn set_up(&mut self, code: usize) {
-        match code {
-            87 => self.w = false,
-            83 => self.s = false,
-            68 => self.d = false,
-            65 => self.a = false,
-            _ => (),
-        }
-    }
-
-    pub fn is_pressed(&self, code: usize) -> bool {
-        match code {
-            87 => self.w == true,
-            83 => self.s == true,
-            68 => self.d == true,
-            65 => self.a == true,
-            _ => false,
         }
     }
 
     pub fn no_keys_held(&self) -> bool {
         !self.w && !self.s && !self.a && !self.d
     }
+
+    pub fn get_cur_direction(&self) -> Direction {
+        fn movement_vector(a: bool, b: bool) -> i8 {
+            match (a, b) {
+                (true, true) | (false, false) => 0,
+                (false, true) => 1,
+                (true, false) => -1,
+            }
+        }
+
+        let horiz = movement_vector(self.a, self.d);
+        let vert = movement_vector(self.w, self.s);
+
+        match (horiz, vert) {
+            (0, 1) => Direction::DOWN,
+            (-1, 1) => Direction::DOWN_LEFT,
+            (1, 1) => Direction::DOWN_RIGHT,
+            (-1, 0) => Direction::LEFT,
+            (1, 0) => Direction::RIGHT,
+            (0, 0) => Direction::STOP,
+            (0, -1) => Direction::UP,
+            (-1, -1) => Direction::UP_LEFT,
+            (1, -1) => Direction::UP_RIGHT,
+            _ => unsafe { unreachable_unchecked() },
+        }
+    }
 }
 
-fn send_movement_msg(direction: MovementDirection) {
+fn send_movement_msg(direction: Direction) {
     let payload = ClientMessageContent::player_move(direction);
     send_user_message(payload);
 }
 
+fn process_movement_update(code: usize, down: bool) {
+    let cur_held_keys = get_cur_held_keys();
+    let old_direction = cur_held_keys.get_cur_direction();
+    get_cur_held_keys().set(code, down);
+    let new_direction = cur_held_keys.get_cur_direction();
+
+    if old_direction != new_direction {
+        send_movement_msg(new_direction);
+
+        // Update direction input directly on the local player entity
+        player_entity_fastpath().direction_input = new_direction;
+    }
+}
+
 #[wasm_bindgen]
 pub fn handle_key_down(code: usize) {
-    log(format!("Handling key down: {}", code));
-    let movement_direction = match code {
-        87 => MovementDirection::UP,
-        83 => MovementDirection::DOWN,
-        68 => MovementDirection::RIGHT,
-        65 => MovementDirection::LEFT,
-        _ => {
-            return;
-        }
-    };
-
-    if !get_cur_held_keys().is_pressed(code) {
-        log("Current pressed key is not already held; sending movement message...");
-        send_movement_msg(movement_direction);
-    }
-    get_cur_held_keys().set_down(code);
+    process_movement_update(code, true);
 }
 
 #[wasm_bindgen]
 pub fn handle_key_up(code: usize) {
-    get_cur_held_keys().set_up(code);
-    if get_cur_held_keys().no_keys_held() {
-        send_movement_msg(MovementDirection::STOP);
-    }
+    process_movement_update(code, false);
 }

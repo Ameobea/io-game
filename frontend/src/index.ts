@@ -34,16 +34,5 @@ wasm
     };
 
     tick();
-
-    await timer(500);
-    const msg1 = engine.temp_gen_server_message_1();
-    console.log(msg1);
-    engine.handle_message(msg1);
-
-    await timer(750);
-    const msg2 = engine.temp_gen_server_message_2();
-    console.log(msg2);
-    console.log(engine.handle_message);
-    engine.handle_message(msg2);
   })
   .catch(err => console.error(`Error while loading Wasm module: ${err}`));

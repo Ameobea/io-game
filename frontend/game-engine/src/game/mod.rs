@@ -82,7 +82,7 @@ impl PlayerEntity {
         let (x_diff, y_diff) = match self.direction_input {
             Direction::DOWN => (0., 1.),
             Direction::DOWN_LEFT => (-1., 1.),
-            Direction::DOWN_RIGHT => (1., -1.),
+            Direction::DOWN_RIGHT => (1., 1.),
             Direction::LEFT => (-1., 0.),
             Direction::RIGHT => (1., 0.),
             Direction::STOP => (0., 0.),
@@ -101,6 +101,8 @@ impl PlayerEntity {
 
         self.pos_x += self.velocity_x;
         self.pos_y += self.velocity_y;
+        self.pos_x *= 1. - CONF.physics.friction_per_tick;
+        self.pos_y *= 1. - CONF.physics.friction_per_tick;
     }
 }
 

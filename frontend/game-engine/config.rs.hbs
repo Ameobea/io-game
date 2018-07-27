@@ -6,6 +6,7 @@ pub struct Conf {
 pub struct PhysicsConf {
     pub acceleration_per_tick: f32,
     pub max_player_speed: f32,
+    pub friction_per_tick: f32,
 }
 
 pub struct NetworkConf {
@@ -20,6 +21,7 @@ pub const CONF: Conf = Conf {
     physics: PhysicsConf {
         acceleration_per_tick: {{ f32 physics-accelerationPerTick }},
         max_player_speed: {{ f32 physics-maxPlayerSpeed }},
+        friction_per_tick: {{ f32 physics-frictionPerTick }},
     },
     network: NetworkConf {
         websocket_url: "{{ network-websocketUrl }}",

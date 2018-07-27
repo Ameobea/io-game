@@ -4,7 +4,8 @@ import "message_common.proto";
 
 message PlayerEntity {
   fixed32 size = 1;
-  MovementDirection direction = 2;
+  float velocity_x = 2; // pixels/tick (60 ticks/second)
+  float velocity_y = 3; // pixels/tick (60 ticks/second)
 }
 
 message CreationEvent {

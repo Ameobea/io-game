@@ -41,11 +41,25 @@ pub struct GameState {
     pub entity_map: BTreeMap<Uuid, Box<Entity + Send + Sync>>,
 }
 
+static mut PLAYER_ENTITY_FASTPATH: *mut PlayerEntity = ptr::null_mut();
+
+pub fn player_entity_fastpath() -> &'static mut PlayerEntity {
+    unsafe { &mut *PLAYER_ENTITY_FASTPATH as &mut PlayerEntity }
+}
+
 impl GameState {
-    pub fn new() -> Self {
+    pub fn new(user_id: Uuid) -> Self {
+        let mut entity_map: BTreeMap<Uuid, Box<Entity + Send + Sync>> = BTreeMap::new();
+        // set up the player entity fast path
+        let player_entity = box PlayerEntity::new(0.0, 0.0, 20);
+        let player_entity_ptr = Box::into_raw(player_entity);
+        unsafe { PLAYER_ENTITY_FASTPATH = player_entity_ptr };
+        let player_entity = unsafe { Box::from_raw(player_entity_ptr) };
+        entity_map.insert(user_id, player_entity);
+
         GameState {
             cur_tick: 0,
-            entity_map: BTreeMap::new(),
+            entity_map,
         }
     }
 
