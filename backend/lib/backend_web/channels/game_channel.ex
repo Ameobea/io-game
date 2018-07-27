@@ -17,7 +17,7 @@ defmodule BackendWeb.GameChannel do
     {:noreply, socket}
   end
 
-  def handle_in("game", data, socket) do
+  def handle_in("idk_what_to_put_here...", data, socket) do
     IO.inspect data
     # client_message = ClientMessage.decode(data)
     {:noreply, socket}

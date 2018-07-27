@@ -33,7 +33,7 @@ defmodule BackendWeb.ProtoSerializer do
     %Phoenix.Socket.Message{
       topic: decoded.topic,
       event: decode_event(decoded.event),
-      payload: decoded.payload,
+      payload: decode_payload(decoded.payload),
       ref: decoded.ref,
     }
   end
@@ -41,5 +41,9 @@ defmodule BackendWeb.ProtoSerializer do
   defp decode_event(%Backend.ProtoMessage.Event{payload: {:phoenix_event, event_name}}) do
     "phx_" <> (event_name |> Atom.to_string |> String.downcase)
   end
-  defp decode_event(other_event), do: other_event
+  defp decode_event(%Backend.ProtoMessage.Event{payload: {:custom_event, event_name}}), do: event_name
+
+  defp decode_payload(nil), do: nil
+  defp decode_payload(%{}), do: nil
+  defp decode_payload(bytes), do: Backend.ProtoMessage.ClientMessage.decode(bytes)
 end
