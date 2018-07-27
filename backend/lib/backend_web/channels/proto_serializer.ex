@@ -26,6 +26,20 @@ defmodule BackendWeb.ProtoSerializer do
   end
 
   def decode!(message, _opts) do
-    Backend.ProtoMessage.ClientMessage.decode(message)
+    IO.inspect(["decoding the proto", Backend.ProtoMessage.ChannelMessage.decode(message)])
+
+    decoded = Backend.ProtoMessage.ChannelMessage.decode(message)
+
+    %Phoenix.Socket.Message{
+      topic: decoded.topic,
+      event: decode_event(decoded.event),
+      payload: decoded.payload,
+      ref: decoded.ref,
+    }
   end
+
+  defp decode_event(%Backend.ProtoMessage.Event{payload: {:phoenix_event, event_name}}) do
+    "phx_" <> (event_name |> Atom.to_string |> String.downcase)
+  end
+  defp decode_event(_other), do: nil
 end

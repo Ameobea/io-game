@@ -2,7 +2,7 @@ defmodule BackendWeb.UserSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "game:first", BackendWeb.GameChannel
+  channel "rooms:game", BackendWeb.GameChannel
 
   ## Transports
   transport :websocket, Phoenix.Transports.WebSocket, serializer: [{BackendWeb.ProtoSerializer, "1.0.0"}]

@@ -2,7 +2,7 @@ defmodule BackendWeb.GameChannel do
   use Phoenix.Channel
   alias BackendWeb.GameState
 
-  def join("game:first", _payload, socket) do
+  def join("rooms:game", _payload, socket) do
     send(self(), :after_join)
     {:ok, assign(socket, :player_id, UUID.uuid4())}
   end
@@ -18,6 +18,7 @@ defmodule BackendWeb.GameChannel do
   end
 
   def handle_in("game", data, socket) do
+    IO.inspect data
     # client_message = ClientMessage.decode(data)
     {:noreply, socket}
   end
