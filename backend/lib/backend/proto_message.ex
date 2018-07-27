@@ -7,7 +7,6 @@ defmodule Backend.ProtoMessage do
     StatusUpdate,
     ServerMessage,
     Uuid,
-    Payload,
     Event,
     PhoenixEvent,
     ChannelMessage,
@@ -47,9 +46,7 @@ defmodule Backend.ProtoMessage do
 
   defp encode_payload(nil), do: nil
   defp encode_payload(%{}), do: nil
-  defp encode_payload(payload) do
-    Payload.new(payload)
-  end
+  defp encode_payload(server_message), do: ServerMessage.encode(server_message)
 
   defp encode_event("phx_" <> event) do
     phx_event = PhoenixEvent.value(event |> String.capitalize |> String.to_atom)

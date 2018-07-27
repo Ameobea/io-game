@@ -26,6 +26,6 @@ defmodule BackendWeb.ProtoSerializer do
   end
 
   def decode!(message, _opts) do
-    Backend.ProtoMessage.ClientMessageWrapper.decode(message)
+    Backend.ProtoMessage.ClientMessage.decode(message)
   end
 end
