@@ -35,10 +35,6 @@ defmodule BackendWeb.GameChannel do
     {:noreply, socket}
   end
 
-  def handle_payload("game", {:connect, %ConnectMessage{username: username}}, socket) do
-    assign(socket, :username, username)
-  end
-
   def handle_in("move_up", _data, socket) do
     player_info = GameState.get_player(socket)
     %{ x: x, y: y } = player_info
@@ -50,5 +46,12 @@ defmodule BackendWeb.GameChannel do
     msg = Backend.ProtoMessage.temp_gen_server_message_1
     push(socket, "temp_gen_server_message_1_res", %{msg: :binary.bin_to_list(msg)})
     {:noreply, socket}
+  end
+
+  defp handle_payload("game", {:connect, %ConnectMessage{username: username}}, socket) do
+    assign(socket, :username, username)
+  end
+  defp handle_payload("game", {:player_move, direction}, socket) do
+    assign(socket, :direction, direction)
   end
 end
