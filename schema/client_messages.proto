@@ -6,18 +6,17 @@ message ConnectMessage {
   string username = 1;
 }
 
-// Should contain a normalized vector (length(0, 0, beam_vec_x, beam_vec_y) == 1.0) indicating the
-// direction that the player is aiming the beam in
-message BeamRotation {
-  float beam_vec_x = 3;
-  float beam_vec_y = 4;
+// The coordinate at which a user is aiming their beam
+message BeamAim {
+  float x = 1;
+  float y = 2;
 }
 
 message ClientMessage {
   oneof payload {
     ConnectMessage connect = 1;
     MovementDirection player_move = 2;
-    BeamRotation beam_rotation = 3;
+    BeamAim beam_rotation = 3;
     bool beam_toggle = 4;
   }
 }

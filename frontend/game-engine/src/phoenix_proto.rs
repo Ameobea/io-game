@@ -8,9 +8,9 @@ use protos::channel_messages::{
 };
 use protos::client_messages::{ClientMessage, ConnectMessage};
 use protos::server_messages::ServerMessage;
-use util::{error, log, warn};
+use util::{error, warn};
 
-use protobuf::{parse_from_bytes, Message, SingularPtrField};
+use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
 
 static mut CUR_REF: usize = 1;
@@ -64,12 +64,10 @@ pub fn join_game_channel() -> Uuid {
     Uuid::nil()
 }
 
-fn warn_msg(msg_type: &str, topic: &str, payload: &SingularPtrField<ServerMessage>) {
+fn warn_msg(msg_type: &str, topic: &str) {
     warn(format!(
-        "Received `{}` message with topic: {}, payload: {:?}",
-        msg_type,
-        topic,
-        payload.as_ref()
+        "Received `{}` message with topic: {}",
+        msg_type, topic,
     ))
 }
 
@@ -97,8 +95,7 @@ pub fn handle_server_msg(bytes: &[u8]) {
             match evt.payload {
                 Some(EventPayload::custom_event(evt)) => match evt {
                     _ => {
-                        warn_msg(&evt, &topic, &payload);
-                        log("Trying to parse the binary payload into a `ServerMessage`...");
+                        warn_msg(&evt, &topic);
                         let server_msg: ServerMessage = match payload.into_option() {
                             Some(msg) => msg,
                             None => {
@@ -113,13 +110,13 @@ pub fn handle_server_msg(bytes: &[u8]) {
                     }
                 },
                 Some(EventPayload::phoenix_event(evt)) => match evt {
-                    PhoenixEvent::Close => warn_msg("close", &topic, &payload),
-                    PhoenixEvent::Join => warn_msg("join", &topic, &payload),
-                    PhoenixEvent::Reply => warn_msg("reply", &topic, &payload),
-                    PhoenixEvent::Leave => warn_msg("leave", &topic, &payload),
+                    PhoenixEvent::Close => warn_msg("close", &topic),
+                    PhoenixEvent::Join => warn_msg("join", &topic),
+                    PhoenixEvent::Reply => warn_msg("reply", &topic),
+                    PhoenixEvent::Leave => warn_msg("leave", &topic),
                     PhoenixEvent::Error => error(format!(
-                        "Phoenix error; topic: {}, payload: {:?}",
-                        topic, payload
+                        "Phoenix error; topic: {}.  Can't print payload because of insane reflection codegen bloat.",
+                        topic
                     )),
                 },
                 None => error("Received channel event with no inner payload!"),

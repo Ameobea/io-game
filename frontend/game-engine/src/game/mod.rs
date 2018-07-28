@@ -43,6 +43,10 @@ pub struct PlayerEntity {
     pub beam_rotation_x: f32,
     /// Y component of a normalized vector that represents the direction that the beam is pointing
     pub beam_rotation_y: f32,
+    /// Current x location of the mouse pointer from the last mouse move event
+    cached_mouse_x: f32,
+    /// Current y location of the mouse pointer from the last mouse move event
+    cached_mouse_y: f32,
 }
 
 impl PlayerEntity {
@@ -61,6 +65,8 @@ impl PlayerEntity {
             size,
             beam_rotation_x: 1.,
             beam_rotation_y: 0.,
+            cached_mouse_x: 0.,
+            cached_mouse_y: 0.,
         }
     }
 
@@ -111,18 +117,15 @@ impl PlayerEntity {
         self.pos_y *= 1. - CONF.physics.friction_per_tick;
     }
 
-    pub fn update_beam(&mut self, mouse_x: u16, mouse_y: u16) -> (f32, f32) {
-        let (v_x, v_y) = (mouse_x as f32 - self.pos_x, mouse_y as f32 - self.pos_y);
+    pub fn update_beam(&mut self, mouse_x: f32, mouse_y: f32) {
+        self.cached_mouse_x = mouse_x;
+        self.cached_mouse_y = mouse_y;
+        let (v_x, v_y) = (mouse_x - self.pos_x, mouse_y - self.pos_y);
         let mouse_vector_magnitude = magnitude(v_x, v_y);
 
-        let (norm_v_x, norm_v_y) = (
-            v_x as f32 / mouse_vector_magnitude,
-            v_y as f32 / mouse_vector_magnitude,
-        );
+        let (norm_v_x, norm_v_y) = (v_x / mouse_vector_magnitude, v_y / mouse_vector_magnitude);
         self.beam_rotation_x = norm_v_x;
         self.beam_rotation_y = norm_v_y;
-
-        (norm_v_x, norm_v_y)
     }
 }
 
@@ -155,6 +158,8 @@ impl Entity for PlayerEntity {
 
     fn tick(&mut self, tick: usize) {
         self.tick_movement();
+        let (mouse_x, mouse_y) = (self.cached_mouse_x, self.cached_mouse_y);
+        self.update_beam(mouse_x, mouse_y);
 
         if tick % 120 == 0 {
             let effect = DemoCircleEffect {

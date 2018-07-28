@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 use game::effects::DemoCircleEffect;
 use game_state::{get_cur_held_keys, get_effects_manager, player_entity_fastpath};
 use proto_utils::send_user_message;
-use protos::client_messages::{BeamRotation, ClientMessage_oneof_payload as ClientMessageContent};
+use protos::client_messages::{BeamAim, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::MovementDirection as Direction;
 use util::Color;
 
@@ -28,7 +28,7 @@ pub fn handle_mouse_down(x: u16, y: u16) {
 }
 
 #[wasm_bindgen]
-pub fn handle_mouse_move(x: u16, y: u16) {
+pub fn handle_mouse_move(x: f32, y: f32) {
     let effect = DemoCircleEffect {
         color: Color::random(),
         width: 6,
@@ -41,13 +41,13 @@ pub fn handle_mouse_move(x: u16, y: u16) {
     get_effects_manager().add_effect(box effect);
 
     // Update the beam direction locally
-    let (beam_rotation_x, beam_rotation_y) = player_entity_fastpath().update_beam(x, y);
+    player_entity_fastpath().update_beam(x, y);
 
     // Send a beam direction update message to the server
-    let mut rotation = BeamRotation::new();
-    rotation.set_beam_vec_x(beam_rotation_x);
-    rotation.set_beam_vec_y(beam_rotation_y);
-    let payload = ClientMessageContent::beam_rotation(rotation);
+    let mut aim = BeamAim::new();
+    aim.set_x(x);
+    aim.set_y(y);
+    let payload = ClientMessageContent::beam_rotation(aim);
     send_user_message(payload);
 }
 
