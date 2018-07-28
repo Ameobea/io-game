@@ -2,13 +2,24 @@ defmodule BackendWeb.GameChannel do
   use Phoenix.Channel
   alias BackendWeb.GameState
 
+  alias Backend.ProtoMessage.{
+    ServerMessage,
+    ClientMessage,
+    ConnectMessage,
+  }
+
   def join("rooms:game", _payload, socket) do
     send(self(), :after_join)
-    {:ok, assign(socket, :player_id, UUID.uuid4())}
+    uuid = UUID.uuid4()
+    {
+      :ok,
+      ServerMessage.new(%{id: Backend.ProtoMessage.to_proto_uuid(uuid)}),
+      assign(socket, :player_id, uuid)
+    }
   end
 
   def handle_info(:after_join, socket) do
-    push socket, "presence_state", GameState.list(socket)
+    # push socket, "presence_state", GameState.list(socket)
     {:ok, _} = GameState.track(socket, socket.assigns.player_id, %{
       online_at: inspect(System.system_time(:seconds)),
       x: 0,
@@ -17,10 +28,15 @@ defmodule BackendWeb.GameChannel do
     {:noreply, socket}
   end
 
-  def handle_in("game", data, socket) do
-    IO.inspect data
+  def handle_in("game", %ClientMessage{payload: payload}, socket) do
+    IO.inspect ["handle_in game payload", payload]
+    socket = handle_payload("game", payload, socket)
     # client_message = ClientMessage.decode(data)
     {:noreply, socket}
+  end
+
+  def handle_payload("game", {:connect, %ConnectMessage{username: username}}, socket) do
+    assign(socket, :username, username)
   end
 
   def handle_in("move_up", _data, socket) do

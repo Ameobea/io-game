@@ -13,13 +13,15 @@ defmodule Backend.ProtoMessage do
   }
 
   def encode_socket_message(%Phoenix.Socket.Message{} = message) do
-    IO.inspect(message.payload)
-    ServerChannelMessage.encode(ServerChannelMessage.new(%{
+    IO.inspect ["payload", message.payload]
+    aa = ServerChannelMessage.encode(ServerChannelMessage.new(%{
       topic: message.topic,
       event: encode_event(message.event),
       ref: message.ref,
-      payload: ServerMessage.new(message.payload),
+      payload: encode_payload(message.payload),
     }))
+    IO.inspect ["out event", message, aa]
+    aa
   end
 
   def temp_gen_server_message_1() do
@@ -34,8 +36,8 @@ defmodule Backend.ProtoMessage do
     # ServerMessage.encode(server_message)
   end
 
-  def generate_uuid() do
-    [part2, part1] = UUID.uuid4()
+  def to_proto_uuid(uuid) do
+    [part2, part1] = uuid
       |> UUID.string_to_binary!
       |> :binary.bin_to_list
       |> Enum.reverse
@@ -43,6 +45,10 @@ defmodule Backend.ProtoMessage do
       |> Enum.map(&Integer.undigits(&1, 256))
 
     Uuid.new(%{data_1: part1, data_2: part2})
+  end
+
+  def generate_uuid() do
+    UUID.uuid4() |> to_proto_uuid
   end
 
   defp encode_event("phx_" <> event) do
@@ -53,4 +59,8 @@ defmodule Backend.ProtoMessage do
   defp encode_event(other_event) do
     Event.new(%{payload: {:custom_event, other_event} })
   end
+
+  defp encode_payload(%{response: payload}), do: payload
+  defp encode_payload(%{}), do: nil
+  defp encode_payload(payload), do: payload
 end
