@@ -4,14 +4,16 @@ use std::collections::BTreeMap;
 use std::mem;
 use std::ptr;
 
+use ncollide2d::bounding_volume::aabb::AABB;
+use ncollide2d::partitioning::{BVTVisitor, DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
 
 use entity::Entity;
 use game::PlayerEntity;
 use proto_utils::ServerMessageContent;
 use protos::server_messages::{
-    CreationEvent_oneof_entity as EntityType, StatusUpdate,
-    StatusUpdate_SimpleEvent as SimpleEvent, StatusUpdate_oneof_payload as Status,
+    CreationEvent, CreationEvent_oneof_entity as EntityType, StatusUpdate,
+    StatusUpdate_SimpleEvent as SimpleEvent, StatusUpdate_oneof_payload as StatusPayload,
 };
 use render_effects::RenderEffectManager;
 use user_input::CurHeldKeys;
@@ -36,65 +38,93 @@ pub fn get_cur_held_keys() -> &'static mut CurHeldKeys {
     unsafe { mem::transmute(CUR_HELD_KEYS) }
 }
 
-pub struct GameState {
-    cur_tick: usize,
-    pub entity_map: BTreeMap<Uuid, Box<Entity + Send + Sync>>,
-}
-
 static mut PLAYER_ENTITY_FASTPATH: *mut PlayerEntity = ptr::null_mut();
 
 pub fn player_entity_fastpath() -> &'static mut PlayerEntity {
     unsafe { &mut *PLAYER_ENTITY_FASTPATH as &mut PlayerEntity }
 }
 
+struct FullVisitor {
+    pub tick: usize,
+}
+
+impl BVTVisitor<Box<dyn Entity>, AABB<f32>> for FullVisitor {
+    fn visit_internal(&mut self, _bv: &AABB<f32>) -> bool {
+        true
+    }
+
+    #[allow(mutable_transmutes)]
+    fn visit_leaf(&mut self, entity: &Box<dyn Entity>, _bv: &AABB<f32>) {
+        // No reason this shouldn't be mutable... I'm just changing the entity behind the
+        // pointer after all.
+        let entity: &mut Box<dyn Entity> = unsafe { mem::transmute(entity) };
+        entity.tick(self.tick);
+        entity.render();
+    }
+}
+
+pub struct GameState {
+    cur_tick: usize,
+    entity_map: DBVT<f32, Box<dyn Entity>, AABB<f32>>,
+    uuid_map: BTreeMap<Uuid, DBVTLeafId>,
+}
+
 impl GameState {
     pub fn new(user_id: Uuid) -> Self {
-        let mut entity_map: BTreeMap<Uuid, Box<Entity + Send + Sync>> = BTreeMap::new();
+        let mut entity_map = DBVT::new();
         // set up the player entity fast path
         let player_entity = box PlayerEntity::new(0.0, 0.0, 20);
         let player_entity_ptr = Box::into_raw(player_entity);
         unsafe { PLAYER_ENTITY_FASTPATH = player_entity_ptr };
         let player_entity = unsafe { Box::from_raw(player_entity_ptr) };
-        entity_map.insert(user_id, player_entity);
+        let player_entity = player_entity as Box<dyn Entity>;
+        let leaf = DBVTLeaf::new(player_entity.get_bounding_volume(), player_entity);
+        let leaf_id = entity_map.insert(leaf);
+        let mut uuid_map = BTreeMap::new();
+        uuid_map.insert(user_id, leaf_id);
 
         GameState {
             cur_tick: 0,
             entity_map,
+            uuid_map,
         }
     }
 
-    pub fn apply_msg(&mut self, entity_id: Uuid, update: &ServerMessageContent) {
-        log(format!("Applying message with id {}", entity_id));
+    #[allow(mutable_transmutes)]
+    pub fn apply_msg(&mut self, entity_id: Uuid, update: ServerMessageContent) {
         match update {
             ServerMessageContent::status_update(StatusUpdate { payload, .. }) => match payload {
-                Some(Status::creation_event(evt)) => {
-                    self.create_entity(evt.entity.as_ref().unwrap(), entity_id, evt.get_pos_x(), evt.get_pos_y())
+                Some(StatusPayload::creation_event(CreationEvent {
+                    pos_x,
+                    pos_y,
+                    entity,
+                    ..
+                })) => if let Some(entity) = entity {
+                    self.create_entity(&entity, entity_id, pos_x, pos_y)
+                } else {
+                    warn("Received entity creation update with no inner entity payload")
                 },
-                Some(Status::other(simple_event)) => match simple_event {
-                    SimpleEvent::DELETION => match self.entity_map.remove(&entity_id) {
-                        Some(_) => (),
-                        None => warn(format!(
-                            "Unable to delete entity {} because it doesn't exist in the entity map!",
-                            entity_id
-                        )),
-                    },
-                },
-                None => warn("Received a message with an empty status payload!"),
+                Some(StatusPayload::other(SimpleEvent::DELETION)) => {
+                    // TODO
+                }
+                None => warn("Received `StatusUpdate` with no payload"),
             },
             _ => {
-                let entity: &mut Box<Entity + Send + Sync> = match self.entity_map.get_mut(&entity_id) {
-                    Some(entity) => entity,
+                let entity_key: &DBVTLeafId = match self.uuid_map.get(&entity_id) {
+                    Some(key) => key,
                     None => {
                         error(format!(
-                            "Unable to find entity id {} to apply update!",
+                            "Received update for entity {} which doesn't exist",
                             entity_id
                         ));
                         return;
                     }
                 };
 
-                entity.apply_update(update)
-            },
+                let DBVTLeaf { data, .. } = &self.entity_map[*entity_key];
+                let entity: &mut Box<dyn Entity> = unsafe { mem::transmute(data) };
+                entity.apply_update(&update);
+            }
         }
     }
 
@@ -102,27 +132,26 @@ impl GameState {
     /// without taking input from the server.  This method iterates over all entities and
     /// optionally performs this mutation before rendering.  Returns the current tick.
     pub fn tick(&mut self) -> usize {
-        for (_id, entity) in &mut self.entity_map {
-            entity.tick(self.cur_tick);
-            entity.render();
-        }
+        let mut visitor = FullVisitor {
+            tick: self.cur_tick,
+        };
+        self.entity_map.visit(&mut visitor);
+
         self.cur_tick += 1;
         self.cur_tick
     }
 
     fn create_entity(&mut self, entity: &EntityType, entity_id: Uuid, pos_x: f32, pos_y: f32) {
-        match entity {
+        let leaf: DBVTLeaf<_, _, _> = match entity {
             EntityType::player(player) => {
                 log("Creating entity...");
                 let entity = PlayerEntity::new(pos_x, pos_y, player.get_size() as u16);
-                match self.entity_map.insert(entity_id, box entity) {
-                    Some(_) => error(format!(
-                        "While creating an entity, an old entity existed with the id {}!",
-                        entity_id
-                    )),
-                    None => (),
-                }
+                let entity: Box<dyn Entity> = box entity;
+                DBVTLeaf::new(entity.get_bounding_volume(), entity)
             }
-        }
+        };
+
+        let leaf_id = self.entity_map.insert(leaf);
+        self.uuid_map.insert(entity_id, leaf_id);
     }
 }

@@ -3,9 +3,12 @@
     use_extern_macros,
     wasm_custom_section,
     wasm_import_module,
-    u128_type
+    u128_type,
+    trivial_bounds,
 )]
 
+extern crate nalgebra;
+extern crate ncollide2d;
 extern crate protobuf;
 extern crate uuid;
 extern crate wasm_bindgen;
@@ -46,7 +49,7 @@ extern "C" {
         endAngle: f64,
         counterClockwise: bool,
     );
-    pub fn render_line(x1: u16, y1: u16, x2: u16, y2: u16);
+    pub fn render_line(width: u16, x1: u16, y1: u16, x2: u16, y2: u16);
 }
 
 #[wasm_bindgen(module = "./inputWrapper")]
@@ -72,7 +75,7 @@ pub fn init() {
 #[wasm_bindgen]
 pub fn handle_message(bytes: &[u8]) {
     if let Some(InnerServerMessage { id, content }) = parse_server_message(bytes) {
-        get_state().apply_msg(id, &content)
+        get_state().apply_msg(id, content)
     } else {
         error("Error while parsing server message!");
     }

@@ -1,5 +1,8 @@
 //! Contains implementation-specific code that is not generic for the engine.
 
+use nalgebra::Point2;
+use ncollide2d::bounding_volume::aabb::AABB;
+
 use super::{render_line, render_quad};
 use conf::CONF;
 use entity::Entity;
@@ -149,6 +152,7 @@ impl Entity for PlayerEntity {
         );
         // Draw beam
         render_line(
+            8,
             self.pos_x as u16,
             self.pos_y as u16,
             (self.pos_x + beam_vec_x) as u16,
@@ -183,5 +187,12 @@ impl Entity for PlayerEntity {
             }
             _ => error("Unexpected server message type received in entity update handler!"),
         }
+    }
+
+    fn get_bounding_volume(&self) -> AABB<f32> {
+        AABB::new(
+            Point2::new(self.pos_x, self.pos_y),
+            Point2::new(self.pos_x + self.size as f32, self.pos_y + self.size as f32),
+        )
     }
 }

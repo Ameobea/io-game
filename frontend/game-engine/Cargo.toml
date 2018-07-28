@@ -3,13 +3,14 @@ authors = ["Casey Primozic <me@ameo.link>"]
 build = "build.rs"
 name = "game-engine"
 version = "0.1.0"
-
 [build-dependencies]
 handlebars = "1.0.0"
 protobuf-codegen-pure = "2.0.3"
 serde_json = "1.0.24"
 
 [dependencies]
+nalgebra = "0.16.0"
+ncollide2d = "0.17.0"
 protobuf = "2.0.4"
 
 [dependencies.uuid]
@@ -25,10 +26,9 @@ rev = "64591ef4038108104a10fbde62670f3232e76960"
 crate-type = ["cdylib"]
 
 [profile]
-
 [profile.dev]
 lto = false
 opt-level = 3
 
 [profile.release]
-lto = true
+lto = false

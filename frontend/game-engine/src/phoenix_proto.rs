@@ -105,7 +105,7 @@ pub fn handle_server_msg(bytes: &[u8]) {
                         };
 
                         if let Some(InnerServerMessage { id, content }) = server_msg.into() {
-                            get_state().apply_msg(id, &content);
+                            get_state().apply_msg(id, content);
                         }
                     }
                 },

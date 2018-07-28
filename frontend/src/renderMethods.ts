@@ -49,8 +49,9 @@ export const render_arc = (
   ctx.stroke();
 };
 
-export const render_line = (x1: number, y1: number, x2: number, y2: number) => {
+export const render_line = (width: number, x1: number, y1: number, x2: number, y2: number) => {
   ctx.beginPath();
+  ctx.lineWidth = width;
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.stroke();
