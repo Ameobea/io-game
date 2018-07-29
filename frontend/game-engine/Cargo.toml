@@ -9,6 +9,7 @@ protobuf-codegen-pure = "2.0.3"
 serde_json = "1.0.24"
 
 [dependencies]
+lazy_static = "*"
 nalgebra = "0.16.0"
 ncollide2d = "0.17.0"
 protobuf = "2.0.4"

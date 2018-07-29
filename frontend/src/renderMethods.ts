@@ -49,8 +49,19 @@ export const render_arc = (
   ctx.stroke();
 };
 
-export const render_line = (width: number, x1: number, y1: number, x2: number, y2: number) => {
+export const render_line = (
+  r: number,
+  g: number,
+  b: number,
+  width: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+) => {
   ctx.beginPath();
+  const color = `rgb(${r},${g},${b})`;
+  ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
@@ -67,4 +78,10 @@ export const fill_poly = (r: number, g: number, b: number, vertex_coords: number
   }
   ctx.closePath();
   ctx.fill();
+};
+
+export const render_point = (r: number, g: number, b: number, x: number, y: number) => {
+  const color = `rgb(${r},${g},${b})`;
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, 1, 1);
 };

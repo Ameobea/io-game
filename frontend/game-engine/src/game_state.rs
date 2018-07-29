@@ -5,10 +5,11 @@ use std::mem;
 use std::ptr;
 
 use nalgebra::{Isometry2, Point2, Vector2};
-use ncollide2d::bounding_volume::aabb::AABB;
-use ncollide2d::partitioning::{DBVTLeaf, DBVTLeafId, DBVT};
+use ncollide2d::bounding_volume::{aabb::AABB, BoundingVolume};
+use ncollide2d::partitioning::{BVTVisitor, DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
 
+use super::render_point;
 use entity::Entity;
 use game::entities::asteroid::Asteroid;
 use game::PlayerEntity;
@@ -46,10 +47,28 @@ pub fn player_entity_fastpath() -> &'static mut PlayerEntity {
     unsafe { &mut *PLAYER_ENTITY_FASTPATH as &mut PlayerEntity }
 }
 
+/// BVT Visitor that returns the UUIDs of all entities that a given BV may be colliding with.
+struct CollisionVisitor<'a> {
+    bv: &'a AABB<f32>,
+    acc: &'a mut Vec<Uuid>,
+}
+
+impl<'a> BVTVisitor<Uuid, AABB<f32>> for CollisionVisitor<'a> {
+    fn visit_internal(&mut self, bv: &AABB<f32>) -> bool {
+        bv.intersects(self.bv)
+    }
+
+    fn visit_leaf(&mut self, entity_id: &Uuid, bv: &AABB<f32>) {
+        if bv.intersects(self.bv) {
+            self.acc.push(*entity_id);
+        }
+    }
+}
+
 pub struct GameState {
     cur_tick: usize,
-    entity_map: DBVT<f32, (), AABB<f32>>,
-    uuid_map: BTreeMap<Uuid, (DBVTLeafId, Box<dyn Entity>)>,
+    pub entity_map: DBVT<f32, Uuid, AABB<f32>>,
+    pub uuid_map: BTreeMap<Uuid, (DBVTLeafId, Box<dyn Entity>)>,
 }
 
 impl GameState {
@@ -61,7 +80,7 @@ impl GameState {
         unsafe { PLAYER_ENTITY_FASTPATH = player_entity_ptr };
         let player_entity = unsafe { Box::from_raw(player_entity_ptr) };
         let player_entity = player_entity as Box<dyn Entity>;
-        let leaf = DBVTLeaf::new(player_entity.get_bounding_volume(), ());
+        let leaf = DBVTLeaf::new(player_entity.get_bounding_volume(), user_id);
         let leaf_id = entity_map.insert(leaf);
         let mut uuid_map = BTreeMap::new();
         uuid_map.insert(user_id, (leaf_id, player_entity));
@@ -117,7 +136,7 @@ impl GameState {
                 if entity.apply_update(&update) {
                     self.entity_map.remove(*leaf_id);
                     let new_bv = entity.get_bounding_volume();
-                    let leaf = DBVTLeaf::new(new_bv, ());
+                    let leaf = DBVTLeaf::new(new_bv, entity_id);
                     let new_leaf_id = self.entity_map.insert(leaf);
                     *leaf_id = new_leaf_id;
                 }
@@ -129,16 +148,21 @@ impl GameState {
     /// without taking input from the server.  This method iterates over all entities and
     /// optionally performs this mutation before rendering.  Returns the current tick.
     pub fn tick(&mut self) -> usize {
-        for (_entity_id, (leaf_id, entity)) in &mut self.uuid_map {
+        for (entity_id, (leaf_id, entity)) in &mut self.uuid_map {
             if entity.tick(self.cur_tick) {
                 // Remove it from the collision tree and re-insert it with a new `BoundingVolume`.
                 self.entity_map.remove(*leaf_id);
                 let new_bv = entity.get_bounding_volume();
-                let leaf = DBVTLeaf::new(new_bv, ());
+                let leaf = DBVTLeaf::new(new_bv, *entity_id);
                 let new_leaf_id = self.entity_map.insert(leaf);
                 *leaf_id = new_leaf_id;
             }
             entity.render();
+            // DEBUG: draw BV min and max points
+            let bv = entity.get_bounding_volume();
+            let (mins, maxs) = (bv.mins(), bv.maxs());
+            render_point(200, 0, 10, mins.x as u16, mins.y as u16);
+            render_point(200, 0, 10, maxs.x as u16, maxs.y as u16);
         }
 
         self.cur_tick += 1;
@@ -170,8 +194,20 @@ impl GameState {
             ),
         };
 
-        let leaf = DBVTLeaf::new(boxed_entity.get_bounding_volume(), ());
+        let leaf = DBVTLeaf::new(boxed_entity.get_bounding_volume(), entity_id);
         let leaf_id = self.entity_map.insert(leaf);
         self.uuid_map.insert(entity_id, (leaf_id, boxed_entity));
+    }
+
+    /// Returns a list of entity IDs that may be colliding with the given BV.
+    pub fn broad_phase(&self, test_bv: &AABB<f32>) -> Vec<Uuid> {
+        let mut found_uuids = Vec::new();
+        let mut visitor = CollisionVisitor {
+            bv: test_bv,
+            acc: &mut found_uuids,
+        };
+        self.entity_map.visit(&mut visitor);
+
+        found_uuids
     }
 }

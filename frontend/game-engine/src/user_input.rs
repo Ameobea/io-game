@@ -23,6 +23,8 @@ pub fn handle_mouse_down(x: u16, y: u16) {
     };
     get_effects_manager().add_effect(box effect);
 
+    player_entity_fastpath().set_beam_active(true);
+
     // Send a "beam on" message to the server
     let payload = ClientMessageContent::beam_toggle(true);
     send_user_message(payload);
@@ -54,6 +56,8 @@ pub fn handle_mouse_move(x: f32, y: f32) {
 
 #[wasm_bindgen]
 pub fn handle_mouse_up(_x: u16, _y: u16) {
+    player_entity_fastpath().set_beam_active(false);
+
     // Send a "beam off" message to the server
     let payload = ClientMessageContent::beam_toggle(false);
     send_user_message(payload);

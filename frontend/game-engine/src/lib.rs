@@ -13,10 +13,12 @@ extern crate ncollide2d;
 extern crate protobuf;
 extern crate uuid;
 extern crate wasm_bindgen;
+#[macro_use]
+extern crate lazy_static;
 
 use std::panic;
 
-use nalgebra::{Point2, Vector2};
+use nalgebra::Vector2;
 use wasm_bindgen::prelude::*;
 
 pub mod conf;
@@ -52,8 +54,9 @@ extern "C" {
         endAngle: f64,
         counterClockwise: bool,
     );
-    pub fn render_line(width: u16, x1: u16, y1: u16, x2: u16, y2: u16);
+    pub fn render_line(r: u8, g: u8, b: u8, width: u16, x1: u16, y1: u16, x2: u16, y2: u16);
     pub fn fill_poly(r: u8, g: u8, b: u8, vertex_coords: &[f32]);
+    pub fn render_point(r: u8, g: u8, b: u8, x: u16, y: u16);
 }
 
 #[wasm_bindgen(module = "./inputWrapper")]
