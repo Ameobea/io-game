@@ -8,11 +8,20 @@ message PlayerEntity {
   float velocity_y = 3; // pixels/tick (60 ticks/second)
 }
 
+message AsteroidEntity {
+  float velocity_x = 1;
+  float velocty_y = 2;
+  float rotation = 3;
+  float delta_rotation = 4;
+  repeated float vert_coords = 5; // List of vertices as [x1, y1, x2, y2, ...]
+}
+
 message CreationEvent {
   float pos_x = 1;
   float pos_y = 2;
   oneof entity {
     PlayerEntity player = 3;
+    AsteroidEntity asteroid = 4;
   }
 }
 

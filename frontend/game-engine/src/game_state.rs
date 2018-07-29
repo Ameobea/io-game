@@ -4,12 +4,13 @@ use std::collections::BTreeMap;
 use std::mem;
 use std::ptr;
 
-use nalgebra::Point2;
+use nalgebra::{Isometry2, Point2, Vector2};
 use ncollide2d::bounding_volume::aabb::AABB;
 use ncollide2d::partitioning::{DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
 
 use entity::Entity;
+use game::entities::asteroid::Asteroid;
 use game::PlayerEntity;
 use proto_utils::ServerMessageContent;
 use protos::server_messages::{
@@ -81,7 +82,7 @@ impl GameState {
                     entity,
                     ..
                 })) => if let Some(entity) = entity {
-                    self.create_entity(&entity, entity_id, Point2::new(pos_x, pos_y))
+                    self.create_entity(&entity, entity_id, Vector2::new(pos_x, pos_y))
                 } else {
                     warn("Received entity creation update with no inner entity payload")
                 },
@@ -144,9 +145,29 @@ impl GameState {
         self.cur_tick
     }
 
-    fn create_entity(&mut self, entity: &EntityType, entity_id: Uuid, pos: Point2<f32>) {
+    pub fn create_entity(
+        &mut self,
+        entity: &EntityType,
+        entity_id: Uuid,
+        translation: Vector2<f32>,
+    ) {
         let boxed_entity: Box<dyn Entity> = match entity {
-            EntityType::player(player) => box PlayerEntity::new(pos, player.get_size() as u16),
+            EntityType::player(player) => box PlayerEntity::new(
+                Point2::new(translation.x, translation.y),
+                player.get_size() as u16,
+            ),
+            EntityType::asteroid(asteroid) => box Asteroid::new(
+                asteroid
+                    .get_vert_coords()
+                    .windows(2)
+                    .map(|pt| Point2::new(pt[0], pt[1]))
+                    .collect(),
+                Isometry2::new(translation, asteroid.get_rotation()),
+                Isometry2::new(
+                    Vector2::new(asteroid.get_velocity_x(), asteroid.get_velocty_y()),
+                    asteroid.get_delta_rotation(),
+                ),
+            ),
         };
 
         let leaf = DBVTLeaf::new(boxed_entity.get_bounding_volume(), ());

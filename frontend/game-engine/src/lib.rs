@@ -16,6 +16,7 @@ extern crate wasm_bindgen;
 
 use std::panic;
 
+use nalgebra::{Point2, Vector2};
 use wasm_bindgen::prelude::*;
 
 pub mod conf;
@@ -32,8 +33,9 @@ pub mod util;
 use game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
 use phoenix_proto::{join_game_channel, send_connect_message};
 use proto_utils::{parse_server_message, InnerServerMessage};
+use protos::server_messages::{AsteroidEntity, CreationEvent_oneof_entity as EntityType};
 use render_effects::RenderEffectManager;
-use util::error;
+use util::{error, v4_uuid};
 
 #[wasm_bindgen(module = "./renderMethods")]
 extern "C" {
@@ -51,6 +53,7 @@ extern "C" {
         counterClockwise: bool,
     );
     pub fn render_line(width: u16, x1: u16, y1: u16, x2: u16, y2: u16);
+    pub fn fill_poly(r: u8, g: u8, b: u8, vertex_coords: &[f32]);
 }
 
 #[wasm_bindgen(module = "./inputWrapper")]
@@ -91,4 +94,28 @@ pub fn tick() {
 #[wasm_bindgen]
 pub fn handle_channel_message(bytes: &[u8]) {
     phoenix_proto::handle_server_msg(bytes)
+}
+
+#[wasm_bindgen]
+pub fn spawn_asteroid(
+    point_coords: Vec<f32>,
+    offset_x: f32,
+    offset_y: f32,
+    rotation_rads: f32,
+    velocity_x: f32,
+    velocity_y: f32,
+    delta_rotation_rads: f32,
+) {
+    let mut entity = AsteroidEntity::new();
+    entity.set_vert_coords(point_coords);
+    entity.set_rotation(rotation_rads);
+    entity.set_velocity_x(velocity_x);
+    entity.set_velocty_y(velocity_y);
+    entity.set_delta_rotation(delta_rotation_rads);
+
+    get_state().create_entity(
+        &EntityType::asteroid(entity),
+        v4_uuid(),
+        Vector2::new(offset_x, offset_y),
+    );
 }

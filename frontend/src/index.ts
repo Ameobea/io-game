@@ -34,5 +34,15 @@ wasm
     };
 
     tick();
+
+    engine.spawn_asteroid(
+      new Float32Array([-10, 10, 10, 10, 10, -10, -10, -10]),
+      150,
+      200,
+      0.65,
+      0.2,
+      0.2,
+      0.1
+    );
   })
   .catch(err => console.error(`Error while loading Wasm module: ${err}`));

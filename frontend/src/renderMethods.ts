@@ -56,3 +56,15 @@ export const render_line = (width: number, x1: number, y1: number, x2: number, y
   ctx.lineTo(x2, y2);
   ctx.stroke();
 };
+
+export const fill_poly = (r: number, g: number, b: number, vertex_coords: number[]) => {
+  const color = `rgb(${r},${g},${b})`;
+  ctx.fillStyle = color;
+
+  ctx.beginPath();
+  for (let i = 0; i < vertex_coords.length; i += 2) {
+    ctx.lineTo(vertex_coords[i], vertex_coords[i + 1]);
+  }
+  ctx.closePath();
+  ctx.fill();
+};
