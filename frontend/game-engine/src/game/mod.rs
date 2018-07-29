@@ -160,7 +160,7 @@ impl Entity for PlayerEntity {
         );
     }
 
-    fn tick(&mut self, tick: usize) {
+    fn tick(&mut self, tick: usize) -> bool {
         self.tick_movement();
         let (mouse_x, mouse_y) = (self.cached_mouse_x, self.cached_mouse_y);
         self.update_beam(mouse_x, mouse_y);
@@ -178,14 +178,20 @@ impl Entity for PlayerEntity {
 
             get_effects_manager().add_effect(box effect);
         }
+
+        self.velocity_x > 0. && self.velocity_y > 0.
     }
 
-    fn apply_update(&mut self, update: &ServerMessageContent) {
+    fn apply_update(&mut self, update: &ServerMessageContent) -> bool {
         match update {
             ServerMessageContent::movement_update(movement_update) => {
                 self.set_movement(movement_update);
+                true
             }
-            _ => error("Unexpected server message type received in entity update handler!"),
+            _ => {
+                error("Unexpected server message type received in entity update handler!");
+                false
+            }
         }
     }
 

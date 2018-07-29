@@ -5,6 +5,7 @@
     wasm_import_module,
     u128_type,
     trivial_bounds,
+    nll,
 )]
 
 extern crate nalgebra;

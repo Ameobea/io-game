@@ -5,7 +5,7 @@ use std::mem;
 use std::ptr;
 
 use ncollide2d::bounding_volume::aabb::AABB;
-use ncollide2d::partitioning::{BVTVisitor, DBVTLeaf, DBVTLeafId, DBVT};
+use ncollide2d::partitioning::{DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
 
 use entity::Entity;
@@ -17,7 +17,7 @@ use protos::server_messages::{
 };
 use render_effects::RenderEffectManager;
 use user_input::CurHeldKeys;
-use util::{error, log, warn};
+use util::{error, warn};
 
 pub static mut STATE: *mut GameState = ptr::null_mut();
 pub static mut EFFECTS_MANAGER: *mut RenderEffectManager = ptr::null_mut();
@@ -44,29 +44,10 @@ pub fn player_entity_fastpath() -> &'static mut PlayerEntity {
     unsafe { &mut *PLAYER_ENTITY_FASTPATH as &mut PlayerEntity }
 }
 
-struct FullVisitor {
-    pub tick: usize,
-}
-
-impl BVTVisitor<Box<dyn Entity>, AABB<f32>> for FullVisitor {
-    fn visit_internal(&mut self, _bv: &AABB<f32>) -> bool {
-        true
-    }
-
-    #[allow(mutable_transmutes)]
-    fn visit_leaf(&mut self, entity: &Box<dyn Entity>, _bv: &AABB<f32>) {
-        // No reason this shouldn't be mutable... I'm just changing the entity behind the
-        // pointer after all.
-        let entity: &mut Box<dyn Entity> = unsafe { mem::transmute(entity) };
-        entity.tick(self.tick);
-        entity.render();
-    }
-}
-
 pub struct GameState {
     cur_tick: usize,
-    entity_map: DBVT<f32, Box<dyn Entity>, AABB<f32>>,
-    uuid_map: BTreeMap<Uuid, DBVTLeafId>,
+    entity_map: DBVT<f32, (), AABB<f32>>,
+    uuid_map: BTreeMap<Uuid, (DBVTLeafId, Box<dyn Entity>)>,
 }
 
 impl GameState {
@@ -78,10 +59,10 @@ impl GameState {
         unsafe { PLAYER_ENTITY_FASTPATH = player_entity_ptr };
         let player_entity = unsafe { Box::from_raw(player_entity_ptr) };
         let player_entity = player_entity as Box<dyn Entity>;
-        let leaf = DBVTLeaf::new(player_entity.get_bounding_volume(), player_entity);
+        let leaf = DBVTLeaf::new(player_entity.get_bounding_volume(), ());
         let leaf_id = entity_map.insert(leaf);
         let mut uuid_map = BTreeMap::new();
-        uuid_map.insert(user_id, leaf_id);
+        uuid_map.insert(user_id, (leaf_id, player_entity));
 
         GameState {
             cur_tick: 0,
@@ -90,7 +71,6 @@ impl GameState {
         }
     }
 
-    #[allow(mutable_transmutes)]
     pub fn apply_msg(&mut self, entity_id: Uuid, update: ServerMessageContent) {
         match update {
             ServerMessageContent::status_update(StatusUpdate { payload, .. }) => match payload {
@@ -105,12 +85,23 @@ impl GameState {
                     warn("Received entity creation update with no inner entity payload")
                 },
                 Some(StatusPayload::other(SimpleEvent::DELETION)) => {
-                    // TODO
+                    let (leaf_id, _) = match self.uuid_map.remove(&entity_id) {
+                        Some(entry) => entry,
+                        None => {
+                            error(format!(
+                                "Attempted to delete entity with id {} but it doesn't exist",
+                                entity_id
+                            ));
+                            return;
+                        }
+                    };
+
+                    self.entity_map.remove(leaf_id);
                 }
                 None => warn("Received `StatusUpdate` with no payload"),
             },
             _ => {
-                let entity_key: &DBVTLeafId = match self.uuid_map.get(&entity_id) {
+                let (leaf_id, entity) = match self.uuid_map.get_mut(&entity_id) {
                     Some(key) => key,
                     None => {
                         error(format!(
@@ -121,9 +112,13 @@ impl GameState {
                     }
                 };
 
-                let DBVTLeaf { data, .. } = &self.entity_map[*entity_key];
-                let entity: &mut Box<dyn Entity> = unsafe { mem::transmute(data) };
-                entity.apply_update(&update);
+                if entity.apply_update(&update) {
+                    self.entity_map.remove(*leaf_id);
+                    let new_bv = entity.get_bounding_volume();
+                    let leaf = DBVTLeaf::new(new_bv, ());
+                    let new_leaf_id = self.entity_map.insert(leaf);
+                    *leaf_id = new_leaf_id;
+                }
             }
         }
     }
@@ -132,26 +127,31 @@ impl GameState {
     /// without taking input from the server.  This method iterates over all entities and
     /// optionally performs this mutation before rendering.  Returns the current tick.
     pub fn tick(&mut self) -> usize {
-        let mut visitor = FullVisitor {
-            tick: self.cur_tick,
-        };
-        self.entity_map.visit(&mut visitor);
+        for (_entity_id, (leaf_id, entity)) in &mut self.uuid_map {
+            if entity.tick(self.cur_tick) {
+                // Remove it from the collision tree and re-insert it with a new `BoundingVolume`.
+                self.entity_map.remove(*leaf_id);
+                let new_bv = entity.get_bounding_volume();
+                let leaf = DBVTLeaf::new(new_bv, ());
+                let new_leaf_id = self.entity_map.insert(leaf);
+                *leaf_id = new_leaf_id;
+            }
+            entity.render();
+        }
 
         self.cur_tick += 1;
         self.cur_tick
     }
 
     fn create_entity(&mut self, entity: &EntityType, entity_id: Uuid, pos_x: f32, pos_y: f32) {
-        let leaf: DBVTLeaf<_, _, _> = match entity {
+        let boxed_entity: Box<dyn Entity> = match entity {
             EntityType::player(player) => {
-                log("Creating entity...");
-                let entity = PlayerEntity::new(pos_x, pos_y, player.get_size() as u16);
-                let entity: Box<dyn Entity> = box entity;
-                DBVTLeaf::new(entity.get_bounding_volume(), entity)
+                box PlayerEntity::new(pos_x, pos_y, player.get_size() as u16)
             }
         };
 
+        let leaf = DBVTLeaf::new(boxed_entity.get_bounding_volume(), ());
         let leaf_id = self.entity_map.insert(leaf);
-        self.uuid_map.insert(entity_id, leaf_id);
+        self.uuid_map.insert(entity_id, (leaf_id, boxed_entity));
     }
 }
