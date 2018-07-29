@@ -1,5 +1,6 @@
 use std::hint::unreachable_unchecked;
 
+use nalgebra::Point2;
 use wasm_bindgen::prelude::*;
 
 use game::effects::DemoCircleEffect;
@@ -41,7 +42,7 @@ pub fn handle_mouse_move(x: f32, y: f32) {
     get_effects_manager().add_effect(box effect);
 
     // Update the beam direction locally
-    player_entity_fastpath().update_beam(x, y);
+    player_entity_fastpath().update_beam(Point2::new(x, y));
 
     // Send a beam direction update message to the server
     let mut aim = BeamAim::new();

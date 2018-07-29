@@ -1,6 +1,6 @@
 //! Contains implementation-specific code that is not generic for the engine.
 
-use nalgebra::Point2;
+use nalgebra::{Point2, Vector2};
 use ncollide2d::bounding_volume::aabb::AABB;
 
 use super::{render_line, render_quad};
@@ -11,65 +11,38 @@ use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::{
     MovementUpdate, ServerMessage_oneof_payload as ServerMessageContent,
 };
-use util::{error, log, magnitude, math_random, Color};
+use util::{error, log, magnitude, Color};
 
 pub mod effects;
 
 use self::effects::DemoCircleEffect;
 
-struct Rgb {
-    pub red: u8,
-    pub green: u8,
-    pub blue: u8,
-}
-
-impl Rgb {
-    pub fn new(red: u8, green: u8, blue: u8) -> Self {
-        Rgb { red, green, blue }
-    }
-}
-
 /// The basic entity that is used right now.  They're all rendered as a square, but they all have
 /// a unique color.
 pub struct PlayerEntity {
-    color: Rgb,
-    pub pos_x: f32,
-    pub pos_y: f32,
+    color: Color,
+    pub pos: Point2<f32>,
     /// Which way the user is telling this entity to go
     pub direction_input: Direction,
-    /// Speed along the x axis in pixels/tick
-    pub velocity_x: f32,
-    /// Speed along the y axis in pixels/tick
-    pub velocity_y: f32,
+    /// Velocity vector along the x/y axises in pixels/tick
+    pub velocity: Vector2<f32>,
     pub size: u16,
-    /// X component of a normalized vector that represents the direction that the beam is pointing
-    pub beam_rotation_x: f32,
-    /// Y component of a normalized vector that represents the direction that the beam is pointing
-    pub beam_rotation_y: f32,
+    /// A normalized vector that represents the direction that the beam is pointing
+    pub beam_rotation: Vector2<f32>,
     /// Current x location of the mouse pointer from the last mouse move event
-    cached_mouse_x: f32,
-    /// Current y location of the mouse pointer from the last mouse move event
-    cached_mouse_y: f32,
+    cached_mouse_pos: Point2<f32>,
 }
 
 impl PlayerEntity {
-    pub fn new(pos_x: f32, pos_y: f32, size: u16) -> Self {
+    pub fn new(pos: Point2<f32>, size: u16) -> Self {
         PlayerEntity {
-            color: Rgb::new(
-                (math_random() * 255.) as u8,
-                (math_random() * 255.) as u8,
-                (math_random() * 255.) as u8,
-            ),
-            pos_x,
-            pos_y,
+            color: Color::random(),
+            pos,
             direction_input: Direction::STOP,
-            velocity_x: 0.,
-            velocity_y: 0.,
+            velocity: Vector2::zeros(),
             size,
-            beam_rotation_x: 1.,
-            beam_rotation_y: 0.,
-            cached_mouse_x: 0.,
-            cached_mouse_y: 0.,
+            beam_rotation: Vector2::new(1., 0.),
+            cached_mouse_pos: unsafe { Point2::new_uninitialized() },
         }
     }
 
@@ -87,10 +60,8 @@ impl PlayerEntity {
             "{}, {}, {}, {}",
             pos_x, pos_y, velocity_x, velocity_y
         ));
-        self.pos_x = pos_x;
-        self.pos_y = pos_y;
-        self.velocity_x = velocity_x;
-        self.velocity_y = velocity_y;
+        self.pos = Point2::new(pos_x, pos_y);
+        self.velocity = Vector2::new(velocity_x, velocity_y);
     }
 
     fn tick_movement(&mut self) {
@@ -108,27 +79,22 @@ impl PlayerEntity {
 
         let acceleration = CONF.physics.acceleration_per_tick;
         let max_speed = CONF.physics.max_player_speed;
-        let (x_diff, y_diff) = (x_diff * acceleration, y_diff * acceleration);
-        if x_diff + y_diff < max_speed {
-            self.velocity_x += x_diff;
-            self.velocity_y += y_diff;
+        let movement_diff = Vector2::new(x_diff, y_diff) * acceleration;
+        if movement_diff.x + movement_diff.y < max_speed {
+            self.velocity += movement_diff;
         }
 
-        self.pos_x += self.velocity_x;
-        self.pos_y += self.velocity_y;
-        self.pos_x *= 1. - CONF.physics.friction_per_tick;
-        self.pos_y *= 1. - CONF.physics.friction_per_tick;
+        self.pos += self.velocity;
+        self.pos *= 1. - CONF.physics.friction_per_tick;
     }
 
-    pub fn update_beam(&mut self, mouse_x: f32, mouse_y: f32) {
-        self.cached_mouse_x = mouse_x;
-        self.cached_mouse_y = mouse_y;
-        let (v_x, v_y) = (mouse_x - self.pos_x, mouse_y - self.pos_y);
-        let mouse_vector_magnitude = magnitude(v_x, v_y);
+    pub fn update_beam(&mut self, mouse_pos: Point2<f32>) {
+        self.cached_mouse_pos = mouse_pos;
+        let mouse_pos_diff = mouse_pos - self.pos;
+        let mouse_vector_magnitude = magnitude(mouse_pos_diff);
 
-        let (norm_v_x, norm_v_y) = (v_x / mouse_vector_magnitude, v_y / mouse_vector_magnitude);
-        self.beam_rotation_x = norm_v_x;
-        self.beam_rotation_y = norm_v_y;
+        let normalized_mouse_vector = mouse_pos_diff / mouse_vector_magnitude;
+        self.beam_rotation = normalized_mouse_vector;
     }
 }
 
@@ -139,38 +105,35 @@ impl Entity for PlayerEntity {
             self.color.red,
             self.color.green,
             self.color.blue,
-            self.pos_x as u16,
-            self.pos_y as u16,
+            self.pos.x as u16,
+            self.pos.y as u16,
             self.size,
             self.size,
         );
 
         let beam_len: f32 = 25.;
-        let (beam_vec_x, beam_vec_y) = (
-            self.beam_rotation_x * beam_len,
-            self.beam_rotation_y * beam_len,
-        );
+        let beam_vec = self.beam_rotation * beam_len;
+        let beam_endpoint = self.pos + beam_vec;
         // Draw beam
         render_line(
             8,
-            self.pos_x as u16,
-            self.pos_y as u16,
-            (self.pos_x + beam_vec_x) as u16,
-            (self.pos_y + beam_vec_y) as u16,
+            self.pos.x as u16,
+            self.pos.y as u16,
+            beam_endpoint.x as u16,
+            beam_endpoint.y as u16,
         );
     }
 
     fn tick(&mut self, tick: usize) -> bool {
         self.tick_movement();
-        let (mouse_x, mouse_y) = (self.cached_mouse_x, self.cached_mouse_y);
-        self.update_beam(mouse_x, mouse_y);
+        self.update_beam(self.cached_mouse_pos);
 
         if tick % 120 == 0 {
             let effect = DemoCircleEffect {
                 color: Color::random(),
                 width: 3,
-                x: self.pos_x as f32,
-                y: (self.pos_y + 50.) as f32,
+                x: self.pos.x,
+                y: self.pos.y + 50.,
                 cur_size: 0.,
                 max_size: 50.,
                 increment: 0.5,
@@ -179,7 +142,7 @@ impl Entity for PlayerEntity {
             get_effects_manager().add_effect(box effect);
         }
 
-        self.velocity_x > 0. && self.velocity_y > 0.
+        self.velocity.x + self.velocity.y > 0.
     }
 
     fn apply_update(&mut self, update: &ServerMessageContent) -> bool {
@@ -197,8 +160,8 @@ impl Entity for PlayerEntity {
 
     fn get_bounding_volume(&self) -> AABB<f32> {
         AABB::new(
-            Point2::new(self.pos_x, self.pos_y),
-            Point2::new(self.pos_x + self.size as f32, self.pos_y + self.size as f32),
+            self.pos,
+            self.pos + Vector2::new(self.size as f32, self.size as f32),
         )
     }
 }

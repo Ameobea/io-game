@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::mem;
 
+use nalgebra::Vector2;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
@@ -62,7 +63,7 @@ impl Color {
 }
 
 /// Returns the magnitude of a 2D vector
-pub fn magnitude(x: f32, y: f32) -> f32 {
-    let sum = (x * x) + (y * y);
+pub fn magnitude(v2: Vector2<f32>) -> f32 {
+    let sum = (v2.x * v2.x) + (v2.y * v2.y);
     sum.sqrt()
 }

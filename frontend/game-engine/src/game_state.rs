@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::mem;
 use std::ptr;
 
+use nalgebra::Point2;
 use ncollide2d::bounding_volume::aabb::AABB;
 use ncollide2d::partitioning::{DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
@@ -54,7 +55,7 @@ impl GameState {
     pub fn new(user_id: Uuid) -> Self {
         let mut entity_map = DBVT::new();
         // set up the player entity fast path
-        let player_entity = box PlayerEntity::new(0.0, 0.0, 20);
+        let player_entity = box PlayerEntity::new(Point2::origin(), 20);
         let player_entity_ptr = Box::into_raw(player_entity);
         unsafe { PLAYER_ENTITY_FASTPATH = player_entity_ptr };
         let player_entity = unsafe { Box::from_raw(player_entity_ptr) };
@@ -80,7 +81,7 @@ impl GameState {
                     entity,
                     ..
                 })) => if let Some(entity) = entity {
-                    self.create_entity(&entity, entity_id, pos_x, pos_y)
+                    self.create_entity(&entity, entity_id, Point2::new(pos_x, pos_y))
                 } else {
                     warn("Received entity creation update with no inner entity payload")
                 },
@@ -143,11 +144,9 @@ impl GameState {
         self.cur_tick
     }
 
-    fn create_entity(&mut self, entity: &EntityType, entity_id: Uuid, pos_x: f32, pos_y: f32) {
+    fn create_entity(&mut self, entity: &EntityType, entity_id: Uuid, pos: Point2<f32>) {
         let boxed_entity: Box<dyn Entity> = match entity {
-            EntityType::player(player) => {
-                box PlayerEntity::new(pos_x, pos_y, player.get_size() as u16)
-            }
+            EntityType::player(player) => box PlayerEntity::new(pos, player.get_size() as u16),
         };
 
         let leaf = DBVTLeaf::new(boxed_entity.get_bounding_volume(), ());
