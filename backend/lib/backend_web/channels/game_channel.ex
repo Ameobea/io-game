@@ -6,6 +6,7 @@ defmodule BackendWeb.GameChannel do
     ServerMessage,
     ClientMessage,
     ConnectMessage,
+    BeamAim,
   }
 
   def join("rooms:game", _payload, socket) do
@@ -20,6 +21,7 @@ defmodule BackendWeb.GameChannel do
 
   def handle_info(:after_join, socket) do
     # push socket, "presence_state", GameState.list(socket)
+    IO.inspect ["channel_pid", socket.channel_pid]
     {:ok, _} = GameState.track(socket, socket.assigns.player_id, %{
       online_at: inspect(System.system_time(:seconds)),
       x: 0,
@@ -53,5 +55,11 @@ defmodule BackendWeb.GameChannel do
   end
   defp handle_payload("game", {:player_move, direction}, socket) do
     assign(socket, :direction, direction)
+  end
+  defp handle_payload("game", {:beam_toggle, toggle}, socket) do
+    assign(socket, :beam_toggle, toggle)
+  end
+  defp handle_payload("game", {:beam_rotation, %BeamAim{} = aim}, socket) do
+    assign(socket, :beam_rotation, aim)
   end
 end
