@@ -26,6 +26,7 @@ pub mod entity;
 pub mod game;
 pub mod game_state;
 pub mod phoenix_proto;
+pub mod physics;
 pub mod proto_utils;
 pub mod protos;
 pub mod render_effects;

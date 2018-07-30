@@ -1,19 +1,29 @@
 use nalgebra::{Isometry2, Point2, Vector2};
 use ncollide2d::bounding_volume::aabb::AABB;
-use ncollide2d::query::{Ray, RayIntersection};
 use ncollide2d::shape::Shape;
 
 use super::super::super::{render_line, render_quad};
 use conf::CONF;
 use entity::Entity;
 use game_state::{get_effects_manager, get_state};
+use physics::ray_collision;
 use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::{
     MovementUpdate, ServerMessage_oneof_payload as ServerMessageContent,
 };
-use util::{error, log, magnitude, Color, ISOMETRY_ZERO};
+use util::{error, log, Color, ISOMETRY_ZERO};
 
 use super::super::effects::DemoCircleEffect;
+
+fn player_vertices(size: u16) -> Vec<Point2<f32>> {
+    let half_perim = 0.5 * (size as f32);
+    vec![
+        Point2::new(-half_perim, half_perim),
+        Point2::new(half_perim, half_perim),
+        Point2::new(half_perim, -half_perim),
+        Point2::new(-half_perim, -half_perim),
+    ]
+}
 
 // The basic entity that is used right now.  They're all rendered as a square, but they all have
 /// a unique color.
@@ -25,6 +35,7 @@ pub struct PlayerEntity {
     /// Velocity vector along the x/y axises in pixels/tick
     pub velocity: Vector2<f32>,
     pub size: u16,
+    vertices: Vec<Point2<f32>>,
     /// A normalized vector that represents the direction that the beam is pointing
     pub beam_rotation: Vector2<f32>,
     /// If the beam is currently being fired
@@ -41,6 +52,7 @@ impl PlayerEntity {
             direction_input: Direction::STOP,
             velocity: Vector2::zeros(),
             size,
+            vertices: player_vertices(size),
             beam_rotation: Vector2::new(1., 0.),
             beam_active: false,
             cached_mouse_pos: unsafe { Point2::new_uninitialized() },
@@ -91,11 +103,7 @@ impl PlayerEntity {
 
     pub fn update_beam(&mut self, mouse_pos: Point2<f32>) {
         self.cached_mouse_pos = mouse_pos;
-        let mouse_pos_diff = mouse_pos - self.pos;
-        let mouse_vector_magnitude = magnitude(mouse_pos_diff);
-
-        let normalized_mouse_vector = mouse_pos_diff / mouse_vector_magnitude;
-        self.beam_rotation = normalized_mouse_vector;
+        self.beam_rotation = (mouse_pos - self.pos).normalize();
     }
 
     pub fn set_beam_active(&mut self, active: bool) {
@@ -162,42 +170,55 @@ impl Entity for PlayerEntity {
         // Check if anything collides with the beam
         let beam_bv = AABB::new(mins, maxs);
         let possible_collisions = get_state().broad_phase(&beam_bv);
-        let closest_collision_distance = possible_collisions
+        let broad_phase_miss = possible_collisions.is_empty();
+
+        let collision_check_opt = possible_collisions
             .into_iter()
-            .map(|entity_id| -> Option<f32> {
+            .map(|entity_id| -> Option<(Point2<f32>, f32)> {
                 let (_leaf_id, entity) = get_state()
                     .uuid_map
                     .get(&entity_id)
                     .expect("Entity was in the collision tree but not the UUID map!");
 
-                if let Some(ray_caster) = entity.as_ray_cast() {
-                    ray_caster.toi_with_ray(
-                        entity.get_isometry(),
-                        &Ray::new(beam_start, self.beam_rotation),
-                        true,
-                    )
-                } else {
-                    None
-                }
-            })
-            .fold(10_000.0f32, |acc, distance_opt| {
-                if let Some(distance) = distance_opt {
-                    acc.min(distance)
-                } else {
-                    acc
+                let verts = entity.get_vertices();
+                ray_collision(beam_start, self.beam_rotation, verts, entity.get_isometry())
+            }).fold(None, |acc, distance_opt| -> Option<(Point2<f32>, f32)> {
+                match (acc, distance_opt) {
+                    (None, Some(res)) => Some(res),
+                    (Some((nearest_collision, smallest_distance)), Some((collision, dist))) => {
+                        if smallest_distance < dist {
+                            Some((nearest_collision, smallest_distance))
+                        } else {
+                            Some((collision, dist))
+                        }
+                    }
+                    (Some(acc), None) => Some(acc),
+                    (None, None) => None,
                 }
             });
 
-        let (line_color, beam_endpoint) = if 10_000.0f32 == closest_collision_distance {
-            (&self.color, beam_endpoint)
-        } else {
+        let (line_color, beam_endpoint) = if let Some((nearest_collision, _)) = collision_check_opt
+        {
             (
                 &Color {
                     red: 255,
                     green: 0,
                     blue: 0,
                 },
-                beam_start + (self.beam_rotation * closest_collision_distance),
+                nearest_collision,
+            )
+        } else {
+            (
+                if broad_phase_miss {
+                    &Color {
+                        red: 0,
+                        green: 0,
+                        blue: 255,
+                    }
+                } else {
+                    &self.color
+                },
+                beam_endpoint,
             )
         };
 
@@ -256,5 +277,9 @@ impl Entity for PlayerEntity {
 
     fn get_isometry(&self) -> &Isometry2<f32> {
         &*ISOMETRY_ZERO
+    }
+
+    fn get_vertices(&self) -> &[Point2<f32>] {
+        &self.vertices
     }
 }

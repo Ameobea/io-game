@@ -1,11 +1,8 @@
 use nalgebra::geometry::Isometry2;
 use nalgebra::{Point2, Vector2};
-use ncollide2d::bounding_volume::{
-    aabb::{aabb, AABB},
-    HasBoundingVolume,
-};
+use ncollide2d::bounding_volume::{aabb::AABB, HasBoundingVolume};
 use ncollide2d::query::RayCast;
-use ncollide2d::shape::{ConvexPolygon, Shape};
+use ncollide2d::shape::{Polyline, Shape};
 
 use super::super::super::fill_poly;
 use entity::Entity;
@@ -17,7 +14,7 @@ pub struct Asteroid {
     pub verts: Vec<Point2<f32>>,
     pub color: Color,
     pub delta_isometry: Isometry2<f32>,
-    convex_poly: ConvexPolygon<f32>,
+    poly_line: Polyline<f32>,
 }
 
 impl Asteroid {
@@ -26,34 +23,31 @@ impl Asteroid {
         isometry: Isometry2<f32>,
         delta_isometry: Isometry2<f32>,
     ) -> Self {
-        let convex_poly = ConvexPolygon::try_from_points(&verts)
-            .expect("Unable to compute convex polygon for asteroid!");
+        let poly_line = Polyline::new(verts.clone());
 
         Asteroid {
             verts,
             isometry,
             delta_isometry,
             color: Color::random(),
-            convex_poly,
+            poly_line,
         }
     }
 }
 
 impl Shape<f32> for Asteroid {
     fn aabb(&self, m: &Isometry2<f32>) -> AABB<f32> {
-        let convex_poly = ConvexPolygon::try_from_points(&self.verts)
-            .expect("Unable to compute convex polygon for asteroid!");
-        convex_poly.aabb(m)
+        self.poly_line.aabb(m)
     }
 
     fn as_ray_cast(&self) -> Option<&RayCast<f32>> {
-        Some(&self.convex_poly)
+        Some(&self.poly_line)
     }
 }
 
 impl Entity for Asteroid {
     fn render(&self) {
-        // TODO: Cache the calculated transformed isometry
+        // TODO: Cache the calculated transformed polyline?
         let coords: Vec<f32> = self
             .verts
             .iter()
@@ -66,24 +60,22 @@ impl Entity for Asteroid {
 
     fn tick(&mut self, _tick: usize) -> bool {
         self.isometry *= self.delta_isometry;
-        // TODO: set up bounding or something to prevent us re-calculating BV every tick
-        let needs_update = self.delta_isometry != Isometry2::new(Vector2::new(0., 0.), 0.);
-        if needs_update {
-            self.convex_poly = ConvexPolygon::try_from_points(&self.verts)
-                .expect("Unable to compute convex polygon for asteroid!");
-        }
-        needs_update
+        self.delta_isometry != Isometry2::new(Vector2::new(0., 0.), 0.)
     }
 
-    fn apply_update(&mut self, update: &ServerMessageContent) -> bool {
+    fn apply_update(&mut self, _update: &ServerMessageContent) -> bool {
         false
     }
 
     fn get_bounding_volume(&self) -> AABB<f32> {
-        self.convex_poly.bounding_volume(&self.isometry)
+        self.poly_line.bounding_volume(&self.isometry)
     }
 
     fn get_isometry(&self) -> &Isometry2<f32> {
         &self.isometry
+    }
+
+    fn get_vertices(&self) -> &[Point2<f32>] {
+        &self.verts
     }
 }

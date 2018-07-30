@@ -14,6 +14,21 @@ const wsInitPromise = new Promise(f => {
 
 export let handleWsMsg: (msg: ArrayBuffer) => void;
 
+const createAsteroidSpawner = engine => (x, y) =>
+  engine.spawn_asteroid(
+    new Float32Array(
+      [0, -20, 5, -14, 10, -7, 15, 0, 8, 8, 3, 17, 0, 18, -5, 12, -8, -2, -5, -12].map(
+        i => i * 2.2 + 10
+      )
+    ),
+    x,
+    y,
+    0.0,
+    0.0,
+    0.0,
+    Math.abs(Math.random() * 0.02)
+  );
+
 wasm
   .then(async engine => {
     (window as any).handle_message = engine.handle_channel_message;
@@ -35,14 +50,12 @@ wasm
 
     tick();
 
-    engine.spawn_asteroid(
-      new Float32Array([-10, 10, 10, 10, 10, -10, -10, -10]),
-      150,
-      200,
-      0.65,
-      0.2,
-      0.2,
-      0.1
-    );
+    const spawnAsteroid = createAsteroidSpawner(engine);
+    spawnAsteroid(300, 400);
+    spawnAsteroid(100, 200);
+    spawnAsteroid(240, 120);
+    spawnAsteroid(60, 360);
+    spawnAsteroid(140, 300);
+    spawnAsteroid(300, 80);
   })
   .catch(err => console.error(`Error while loading Wasm module: ${err}`));

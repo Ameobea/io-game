@@ -9,7 +9,6 @@ use ncollide2d::bounding_volume::{aabb::AABB, BoundingVolume};
 use ncollide2d::partitioning::{BVTVisitor, DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
 
-use super::render_point;
 use entity::Entity;
 use game::entities::asteroid::Asteroid;
 use game::PlayerEntity;
@@ -158,11 +157,6 @@ impl GameState {
                 *leaf_id = new_leaf_id;
             }
             entity.render();
-            // DEBUG: draw BV min and max points
-            let bv = entity.get_bounding_volume();
-            let (mins, maxs) = (bv.mins(), bv.maxs());
-            render_point(200, 0, 10, mins.x as u16, mins.y as u16);
-            render_point(200, 0, 10, maxs.x as u16, maxs.y as u16);
         }
 
         self.cur_tick += 1;
@@ -183,7 +177,7 @@ impl GameState {
             EntityType::asteroid(asteroid) => box Asteroid::new(
                 asteroid
                     .get_vert_coords()
-                    .windows(2)
+                    .chunks(2)
                     .map(|pt| Point2::new(pt[0], pt[1]))
                     .collect(),
                 Isometry2::new(translation, asteroid.get_rotation()),

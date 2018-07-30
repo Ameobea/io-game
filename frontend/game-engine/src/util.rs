@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::mem;
 
-use nalgebra::{Isometry2, Vector2};
+use nalgebra::Isometry2;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
@@ -64,10 +64,4 @@ impl Color {
         let (red, green, blue, _): (u8, u8, u8, [u8; 5]) = unsafe { mem::transmute(math_random()) };
         Color { red, green, blue }
     }
-}
-
-/// Returns the magnitude of a 2D vector
-pub fn magnitude(v2: Vector2<f32>) -> f32 {
-    let sum = (v2.x * v2.x) + (v2.y * v2.y);
-    sum.sqrt()
 }

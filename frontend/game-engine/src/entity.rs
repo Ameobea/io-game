@@ -1,7 +1,7 @@
 //! Every "thing" in the game is an entity.  Every entity is renderable, and the game loop runs
 //! by looping over all entities and rendering them.
 
-use nalgebra::Isometry2;
+use nalgebra::{Isometry2, Point2};
 use ncollide2d::bounding_volume::aabb::AABB;
 use ncollide2d::shape::Shape;
 
@@ -22,4 +22,6 @@ pub trait Entity: Shape<f32> {
     fn get_bounding_volume(&self) -> AABB<f32>;
 
     fn get_isometry(&self) -> &Isometry2<f32>;
+
+    fn get_vertices(&self) -> &[Point2<f32>];
 }
