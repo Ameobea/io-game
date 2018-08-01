@@ -22,6 +22,7 @@
     "build": "rm -rf dist/* && webpack --config webpack.prod.js"
   },
   "dependencies": {
-    "@types/html-webpack-plugin": "^2.30.4"
+    "@types/html-webpack-plugin": "^2.30.4",
+    "twgl-base.js": "^4.4.0"
   }
 }

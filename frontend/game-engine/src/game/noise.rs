@@ -62,7 +62,7 @@ fn get_composition_tree() -> CompositionTree {
     }
 }
 
-pub fn generate_background_bitmap(width: usize, height: usize) -> Vec<u8> {
+pub fn generate_background_texture(width: usize, height: usize) -> Vec<u8> {
     let color_fn = ColorFunction::Cosmos;
     let tree = get_composition_tree();
 

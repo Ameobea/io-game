@@ -3840,6 +3840,10 @@ tty-browserify@0.0.0:
   version "0.0.0"
   resolved "https://registry.yarnpkg.com/tty-browserify/-/tty-browserify-0.0.0.tgz#a157ba402da24e9bf957f9aa69d524eed42901a6"
 
+twgl-base.js@^4.4.0:
+  version "4.4.0"
+  resolved "https://registry.yarnpkg.com/twgl-base.js/-/twgl-base.js-4.4.0.tgz#85fa5b0baf234a06b77417da142d1d6f5dd5d52d"
+
 type-is@~1.6.15, type-is@~1.6.16:
   version "1.6.16"
   resolved "https://registry.yarnpkg.com/type-is/-/type-is-1.6.16.tgz#f89ce341541c672b25ee7ae3c73dee3b2be50194"

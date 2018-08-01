@@ -1,5 +1,6 @@
 const wasm = import('./game_engine');
 import { clearCanvas } from './renderMethods';
+import { initWebGL } from './webgl';
 import { initEventHandlers } from './inputWrapper';
 
 export const timer = timeMs => new Promise(f => setTimeout(f, timeMs));
@@ -30,6 +31,8 @@ const createAsteroidSpawner = engine => (x, y) =>
 wasm
   .then(async engine => {
     (window as any).handle_message = engine.handle_channel_message;
+
+    initWebGL();
 
     // Wait for the websocket to connect
     await wsInitPromise;

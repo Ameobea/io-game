@@ -62,13 +62,17 @@ extern "C" {
     pub fn render_line(r: u8, g: u8, b: u8, width: u16, x1: u16, y1: u16, x2: u16, y2: u16);
     pub fn fill_poly(r: u8, g: u8, b: u8, vertex_coords: &[f32]);
     pub fn render_point(r: u8, g: u8, b: u8, x: u16, y: u16);
-    pub fn create_background_bitmap(height: usize, width: usize, texture_data: &[u8]);
-    pub fn draw_background(offset_x: usize, offset_y: usize);
 }
 
 #[wasm_bindgen(module = "./inputWrapper")]
 extern "C" {
     pub fn send_message(msg: Vec<u8>);
+}
+
+#[wasm_bindgen(module = "./webgl")]
+extern "C" {
+    pub fn create_background_texture(height: usize, width: usize, texture_data: &[u8]);
+    pub fn draw_background(offset_x: usize, offset_y: usize);
 }
 
 #[wasm_bindgen]
@@ -83,8 +87,8 @@ pub fn init() {
     let effects_manager = box RenderEffectManager::new();
     unsafe { EFFECTS_MANAGER = Box::into_raw(effects_manager) };
 
-    let background_texture = game::noise::generate_background_bitmap(1500, 1500);
-    create_background_bitmap(1500, 1500, &background_texture);
+    let background_texture = game::noise::generate_background_texture(1500, 1500);
+    create_background_texture(1500, 1500, &background_texture);
 
     send_connect_message();
 }
