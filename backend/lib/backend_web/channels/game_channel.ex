@@ -31,7 +31,7 @@ defmodule BackendWeb.GameChannel do
 
   def handle_in("game", %ClientMessage{payload: payload}, socket) do
     IO.inspect ["handle_in game payload", payload]
-    socket = handle_payload("game", payload, socket)
+    handle_payload("game", payload, socket)
     # client_message = ClientMessage.decode(data)
     {:noreply, socket}
   end
@@ -57,6 +57,5 @@ defmodule BackendWeb.GameChannel do
 
   defp queue_user_input(socket, key, value) do
     GameLoop.queue_message(socket.topic, {socket.assigns.player_id, key, value})
-    socket
   end
 end
