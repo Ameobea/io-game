@@ -1,6 +1,6 @@
 defmodule BackendWeb.GameChannel do
   use Phoenix.Channel
-  alias BackendWeb.GameState
+  alias BackendWeb.{GameState, GameLoop}
 
   alias Backend.ProtoMessage.{
     ServerMessage,
@@ -22,8 +22,7 @@ defmodule BackendWeb.GameChannel do
   def handle_info(:after_join, socket) do
     # push socket, "presence_state", GameState.list(socket)
     IO.inspect ["channel_pid", socket.channel_pid]
-    {:ok, _} = GameState.track(socket, socket.assigns.player_id, %{
-      online_at: inspect(System.system_time(:seconds)),
+    :ok = GameState.track_player(socket.topic, socket.assigns.player_id, %{
       x: 0,
       y: 0,
     })
@@ -37,13 +36,6 @@ defmodule BackendWeb.GameChannel do
     {:noreply, socket}
   end
 
-  def handle_in("move_up", _data, socket) do
-    player_info = GameState.get_player(socket)
-    %{ x: x, y: y } = player_info
-    GameState.update(socket, socket.assigns.player_id, %{x: x, y: y + 1})
-    {:noreply, socket}
-  end
-
   def handle_in("temp_gen_server_message_1", _data, socket) do
     msg = Backend.ProtoMessage.temp_gen_server_message_1
     push(socket, "temp_gen_server_message_1_res", %{msg: :binary.bin_to_list(msg)})
@@ -51,15 +43,19 @@ defmodule BackendWeb.GameChannel do
   end
 
   defp handle_payload("game", {:connect, %ConnectMessage{username: username}}, socket) do
-    assign(socket, :username, username)
+    queue_user_input(socket, :username, username)
   end
   defp handle_payload("game", {:player_move, direction}, socket) do
-    assign(socket, :direction, direction)
+    queue_user_input(socket, :direction, direction)
   end
   defp handle_payload("game", {:beam_toggle, toggle}, socket) do
-    assign(socket, :beam_toggle, toggle)
+    queue_user_input(socket, :beam_toggle, toggle)
   end
   defp handle_payload("game", {:beam_rotation, %BeamAim{} = aim}, socket) do
-    assign(socket, :beam_rotation, aim)
+    queue_user_input(socket, :beam_rotation, aim)
+  end
+
+  defp queue_user_input(socket, key, value) do
+    GameLoop.queue_message(socket.topic, {socket.assigns.player_id, key, value})
   end
 end

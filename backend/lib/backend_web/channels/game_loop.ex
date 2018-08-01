@@ -2,21 +2,20 @@ defmodule BackendWeb.GameLoop do
   use GenServer
   alias BackendWeb.GameState
 
-  @timedelay 20000
+  @timedelay 5000
   @nanoseconds_to_seconds 1_000_000_000
 
-  def init(_state) do
+  def init(_) do
     start_tick()
-    {:ok, {get_time(), []}}
+    {:ok, {get_time(), %{}}}
   end
 
-  def start_link(default \\ "my game loop") do
-    GenServer.start_link(__MODULE__, default)
+  def start_link() do
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  def queue_message(topic, message) do
+  def queue_message(topic, message = {_player_id, _key, _value}) do
     GenServer.call(__MODULE__, {:handle_message, topic, message})
-    :ok
   end
 
   def handle_info(:tick, state) do
@@ -26,7 +25,8 @@ defmodule BackendWeb.GameLoop do
 
   def handle_call({:handle_message, topic, new_message}, _from, {time, messages}) do
     {
-      :noreply,
+      :reply,
+      nil,
       {
         time,
         Map.put(messages, topic, [new_message | Map.get(messages, topic, [])])
@@ -47,14 +47,14 @@ defmodule BackendWeb.GameLoop do
 
   defp update_topics([], _time_diff, _messages), do: nil
   defp update_topics([topic | rest], time_diff, messages) do
-    {:something_important} = calculate_messages(messages[topic])
-    GameState.update_topic(topic, &update_topic(&1, time_diff, :something_important))
+    player_inputs = calculate_messages(messages[topic])
+    GameState.update_topic(topic, &update_topic(&1, time_diff, player_inputs))
     update_topics(rest, time_diff, messages)
   end
 
-  defp update_topic(topic_state, time_diff, _player_updates) do
+  defp update_topic(topic_state, _time_diff, _player_inputs) do
     player_ids = Map.keys(topic_state)
-    update_players(player_ids, topic_state)
+    update_players(topic_state, player_ids)
   end
 
   defp update_players(topic_state, []), do: topic_state
@@ -64,8 +64,13 @@ defmodule BackendWeb.GameLoop do
     |> update_players(rest)
   end
 
-  defp calculate_messages(messages) do
-    {:something_important}
+  defp calculate_messages(nil), do: %{}
+  defp calculate_messages(messages), do: calculate_messages(%{}, Enum.reverse(messages))
+  defp calculate_messages(acc, []), do: acc
+  defp calculate_messages(acc, [{player_id, key, value} | rest]) do
+    player_input = Map.put(acc[player_id] || %{}, key, value)
+    Map.put(acc, player_id, player_input)
+    |> calculate_messages(rest)
   end
 
   defp start_tick() do

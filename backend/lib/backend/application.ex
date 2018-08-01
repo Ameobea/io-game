@@ -12,7 +12,7 @@ defmodule Backend.Application do
       supervisor(BackendWeb.Endpoint, []),
       # Start your own worker by calling: Backend.Worker.start_link(arg1, arg2, arg3)
       # worker(Backend.Worker, [arg1, arg2, arg3]),
-      BackendWeb.GameState,
+      worker(BackendWeb.GameState, []),
       worker(BackendWeb.GameLoop, []),
     ]
 
