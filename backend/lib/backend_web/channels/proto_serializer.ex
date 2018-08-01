@@ -27,7 +27,6 @@ defmodule BackendWeb.ProtoSerializer do
 
   def decode!(message, _opts) do
     decoded = Backend.ProtoMessage.ClientChannelMessage.decode(message)
-    # IO.inspect(["decoded the proto", decoded])
 
     %Phoenix.Socket.Message{
       topic: decoded.topic,

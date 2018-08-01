@@ -2,10 +2,6 @@ defmodule Backend.ProtoMessage do
   use Protobuf, from: Path.wildcard(Path.expand("../../../schema/**/*.proto", __DIR__))
 
   alias Backend.ProtoMessage.{
-    PlayerEntity,
-    CreationEvent,
-    StatusUpdate,
-    ServerMessage,
     Uuid,
     Event,
     PhoenixEvent,
@@ -24,18 +20,6 @@ defmodule Backend.ProtoMessage do
     aa
   end
 
-  def temp_gen_server_message_1() do
-    entity = PlayerEntity.new(%{size: 60, direction: :STOP})
-    event = CreationEvent.new(%{
-      pos_x: 50,
-      pos_y: 50,
-      entity: {:player, entity}
-    })
-    status_update = StatusUpdate.new(%{payload: {:creation_event, event}})
-    ServerMessage.new(%{id: generate_uuid(), payload: {:status_update, status_update}})
-    # ServerMessage.encode(server_message)
-  end
-
   def to_proto_uuid(uuid) do
     [part2, part1] = uuid
       |> UUID.string_to_binary!
@@ -49,6 +33,35 @@ defmodule Backend.ProtoMessage do
 
   def generate_uuid() do
     UUID.uuid4() |> to_proto_uuid
+  end
+
+  def encode_game_state_to_snapshot(game_state) do
+    items = game_state
+      |> Map.to_list()
+      |> Enum.map(&to_snapshot_item/1)
+    Snapshot.new(%{items: items})
+  end
+
+  defp to_snapshot_item({player_id, data = %{}}) do
+    %{
+      pos_x: pos_x,
+      pos_y: pos_y,
+      size: size,
+      velocity_x: velocity_x,
+      velocity_y: velocity_y,
+    } = data
+    Snapshot.SnapshotItem.new(%{
+      id: player_id,
+      item: CreationEvent.new(%{
+        pos_x: pos_x,
+        pos_y: pos_y,
+        entity: {:player, PlayerEntity.new(%{
+          size: size,
+          velocity_x: velocity_x,
+          velocity_y: velocity_y,
+        })}
+      }),
+    })
   end
 
   defp encode_event("phx_" <> event) do
