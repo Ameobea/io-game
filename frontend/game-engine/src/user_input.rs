@@ -3,7 +3,7 @@ use std::hint::unreachable_unchecked;
 use nalgebra::Point2;
 use wasm_bindgen::prelude::*;
 
-use game::effects::DemoCircleEffect;
+use game::effects::DemoCircle;
 use game_state::{get_cur_held_keys, get_effects_manager, player_entity_fastpath};
 use proto_utils::send_user_message;
 use protos::client_messages::{BeamAim, ClientMessage_oneof_payload as ClientMessageContent};
@@ -12,14 +12,14 @@ use util::Color;
 
 #[wasm_bindgen]
 pub fn handle_mouse_down(x: u16, y: u16) {
-    let effect = DemoCircleEffect {
+    let effect = DemoCircle {
         color: Color::random(),
-        width: 6,
+        width: 2,
         x: x as f32,
         y: y as f32,
         cur_size: 0.,
-        max_size: 30.,
-        increment: 1.,
+        max_size: 10.,
+        increment: 3.4,
     };
     get_effects_manager().add_effect(box effect);
 
@@ -32,17 +32,6 @@ pub fn handle_mouse_down(x: u16, y: u16) {
 
 #[wasm_bindgen]
 pub fn handle_mouse_move(x: f32, y: f32) {
-    let effect = DemoCircleEffect {
-        color: Color::random(),
-        width: 6,
-        x: x as f32,
-        y: y as f32,
-        cur_size: 0.,
-        max_size: 6.,
-        increment: 0.75,
-    };
-    get_effects_manager().add_effect(box effect);
-
     // Update the beam direction locally
     player_entity_fastpath().update_beam(Point2::new(x, y));
 

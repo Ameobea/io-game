@@ -156,7 +156,7 @@ impl GameState {
                 let new_leaf_id = self.entity_map.insert(leaf);
                 *leaf_id = new_leaf_id;
             }
-            entity.render();
+            entity.render(self.cur_tick);
         }
 
         self.cur_tick += 1;

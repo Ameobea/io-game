@@ -5,6 +5,7 @@ use ncollide2d::shape::Shape;
 use super::super::super::{render_line, render_quad};
 use conf::CONF;
 use entity::Entity;
+use game::effects::DrillingParticles;
 use game_state::{get_effects_manager, get_state};
 use physics::ray_collision;
 use protos::message_common::MovementDirection as Direction;
@@ -13,7 +14,7 @@ use protos::server_messages::{
 };
 use util::{error, log, Color, ISOMETRY_ZERO};
 
-use super::super::effects::DemoCircleEffect;
+use super::super::effects::DemoCircle;
 
 fn player_vertices(size: u16) -> Vec<Point2<f32>> {
     let half_perim = 0.5 * (size as f32);
@@ -121,7 +122,7 @@ impl Shape<f32> for PlayerEntity {
 }
 
 impl Entity for PlayerEntity {
-    fn render(&self) {
+    fn render(&self, cur_tick: usize) {
         // Draw entity body
         render_quad(
             self.color.red,
@@ -199,6 +200,20 @@ impl Entity for PlayerEntity {
 
         let (line_color, beam_endpoint) = if let Some((nearest_collision, _)) = collision_check_opt
         {
+            let drilling_effect = DrillingParticles::new(
+                nearest_collision,
+                cur_tick,
+                5,
+                4,
+                1.45,
+                Color {
+                    red: 240,
+                    green: 30,
+                    blue: 41,
+                },
+            );
+            get_effects_manager().add_effect(box drilling_effect);
+
             (
                 &Color {
                     red: 255,
@@ -239,7 +254,7 @@ impl Entity for PlayerEntity {
         self.update_beam(self.cached_mouse_pos);
 
         if tick % 120 == 0 {
-            let effect = DemoCircleEffect {
+            let effect = DemoCircle {
                 color: Color::random(),
                 width: 3,
                 x: self.pos.x,

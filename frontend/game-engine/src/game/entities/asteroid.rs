@@ -46,7 +46,7 @@ impl Shape<f32> for Asteroid {
 }
 
 impl Entity for Asteroid {
-    fn render(&self) {
+    fn render(&self, _cur_tick: usize) {
         // TODO: Cache the calculated transformed polyline?
         let coords: Vec<f32> = self
             .verts

@@ -8,7 +8,7 @@ use ncollide2d::shape::Shape;
 use proto_utils::ServerMessageContent;
 
 pub trait Entity: Shape<f32> {
-    fn render(&self);
+    fn render(&self, tick: usize);
 
     /// Updates this entity's state for one tick.  Returns `true` if the entity has moved or
     /// changed shape in a way that it has a new `BoundingVolume`.

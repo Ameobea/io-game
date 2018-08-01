@@ -1,9 +1,9 @@
-use super::super::render_arc;
+use super::super::super::render_arc;
 use render_effects::RenderEffect;
-use std::f64;
+use std::f32;
 use util::Color;
 
-pub struct DemoCircleEffect {
+pub struct DemoCircle {
     pub color: Color,
     pub width: u16,
     pub x: f32,
@@ -13,7 +13,7 @@ pub struct DemoCircleEffect {
     pub increment: f32,
 }
 
-impl DemoCircleEffect {
+impl DemoCircle {
     fn render(&self) {
         render_arc(
             self.color.red,
@@ -24,13 +24,13 @@ impl DemoCircleEffect {
             self.width,
             self.cur_size as u16,
             0.,
-            2. * f64::consts::PI,
+            2. * f32::consts::PI,
             true,
         );
     }
 }
 
-impl RenderEffect for DemoCircleEffect {
+impl RenderEffect for DemoCircle {
     fn tick_and_render(&mut self, _tick: usize) -> bool {
         self.cur_size += self.increment;
         self.render();

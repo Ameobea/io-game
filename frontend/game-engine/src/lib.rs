@@ -51,8 +51,8 @@ extern "C" {
         y: u16,
         width: u16,
         radius: u16,
-        startAngle: f64,
-        endAngle: f64,
+        startAngle: f32,
+        endAngle: f32,
         counterClockwise: bool,
     );
     pub fn render_line(r: u8, g: u8, b: u8, width: u16, x1: u16, y1: u16, x2: u16, y2: u16);

@@ -12,10 +12,10 @@ pub fn ray_collision(
     vertices: &[Point2<f32>],
     isometry: &Isometry2<f32>,
 ) -> Option<(Point2<f32>, f32)> {
-    let mut last_transformed_pt = isometry * vertices[0];
+    // Start with the last point since the passed in points are non-closed
+    let mut last_transformed_pt = isometry * vertices.last().unwrap();
     let (nearest_collision, smallest_distance) = vertices
         .into_iter()
-        .skip(1)
         .map(|point| {
             // Translate + rotate segment in accordance with the entity's isometry
             let seg_start = last_transformed_pt;
