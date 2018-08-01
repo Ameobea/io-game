@@ -126,7 +126,7 @@ pub fn spawn_asteroid(
     entity.set_vert_coords(point_coords);
     entity.set_rotation(rotation_rads);
     entity.set_velocity_x(velocity_x);
-    entity.set_velocty_y(velocity_y);
+    entity.set_velocity_y(velocity_y);
     entity.set_delta_rotation(delta_rotation_rads);
 
     get_state().create_entity(

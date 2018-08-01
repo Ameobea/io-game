@@ -1,12 +1,70 @@
 use libcomposition::color_schemes::ColorFunction;
-use libcomposition::util::build_tree_from_def;
-use libcomposition::CompositionTree;
-use noise::NoiseFn;
+use libcomposition::composition::CompositionScheme;
+use libcomposition::transformations::InputTransformation;
+use libcomposition::{
+    ComposedNoiseModule, CompositionTree, CompositionTreeNode, CompositionTreeNodeType, MasterConf,
+};
+use noise::{Billow, Constant, MultiFractal, NoiseFn, RidgedMulti};
+
+fn get_composition_tree() -> CompositionTree {
+    let root_node = CompositionTreeNode {
+        function: CompositionTreeNodeType::Combined(ComposedNoiseModule {
+            composer: CompositionScheme::Average,
+            children: vec![
+                CompositionTreeNode {
+                    function: CompositionTreeNodeType::Leaf(box {
+                        let module = RidgedMulti::new();
+                        let module = module.set_frequency(1.0);
+                        let module = module.set_lacunarity(2.0);
+                        let module = module.set_persistence(0.5);
+                        let module = module.set_attenuation(2.0);
+                        module
+                    }),
+                    transformations: vec![InputTransformation::ZoomScale {
+                        speed: 9.0,
+                        zoom: 0.3,
+                    }],
+                },
+                CompositionTreeNode {
+                    function: CompositionTreeNodeType::Combined(ComposedNoiseModule {
+                        composer: CompositionScheme::Average,
+                        children: vec![CompositionTreeNode {
+                            function: CompositionTreeNodeType::Leaf(box {
+                                let module = Billow::new();
+                                let module = module.set_frequency(1.0);
+                                let module = module.set_lacunarity(2.0);
+                                let module = module.set_persistence(0.5);
+                                module
+                            }),
+                            transformations: vec![InputTransformation::ScaleAll(2.3)],
+                        }],
+                    }),
+                    transformations: vec![InputTransformation::ZoomScale {
+                        speed: 3.0,
+                        zoom: 0.5,
+                    }],
+                },
+                CompositionTreeNode {
+                    function: CompositionTreeNodeType::Leaf(box Constant::new(-0.3)),
+                    transformations: Vec::new(),
+                },
+            ],
+        }),
+        transformations: vec![InputTransformation::ZoomScale {
+            speed: 0.6,
+            zoom: 1.0,
+        }],
+    };
+
+    CompositionTree {
+        root_node,
+        global_conf: MasterConf::default(),
+    }
+}
 
 pub fn generate_background_bitmap(width: usize, height: usize) -> Vec<u8> {
-    let tree_def_str = include_str!("./noise_composition_def.json");
-    let (color_fn, tree): (ColorFunction, CompositionTree) =
-        build_tree_from_def(tree_def_str).unwrap();
+    let color_fn = ColorFunction::Cosmos;
+    let tree = get_composition_tree();
 
     let mut pixel_data: Vec<u8> = Vec::with_capacity(width * height * 4);
     for y in 0..height {
