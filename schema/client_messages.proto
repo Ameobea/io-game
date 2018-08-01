@@ -8,8 +8,8 @@ message ConnectMessage {
 
 // The coordinate at which a user is aiming their beam
 message BeamAim {
-  float x = 1;
-  float y = 2;
+  uint32 x = 1;
+  uint32 y = 2;
 }
 
 message ClientMessage {

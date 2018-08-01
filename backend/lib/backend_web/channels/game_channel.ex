@@ -57,5 +57,6 @@ defmodule BackendWeb.GameChannel do
 
   defp queue_user_input(socket, key, value) do
     GameLoop.queue_message(socket.topic, {socket.assigns.player_id, key, value})
+    socket
   end
 end

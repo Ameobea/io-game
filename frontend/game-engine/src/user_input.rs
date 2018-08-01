@@ -37,8 +37,8 @@ pub fn handle_mouse_move(x: f32, y: f32) {
 
     // Send a beam direction update message to the server
     let mut aim = BeamAim::new();
-    aim.set_x(x);
-    aim.set_y(y);
+    aim.set_x(x as u32);
+    aim.set_y(y as u32);
     let payload = ClientMessageContent::beam_rotation(aim);
     send_user_message(payload);
 }
