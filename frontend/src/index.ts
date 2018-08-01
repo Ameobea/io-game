@@ -1,8 +1,6 @@
 const wasm = import('./game_engine');
-import { getCanvas, clearCanvas } from './renderMethods';
+import { clearCanvas } from './renderMethods';
 import { initEventHandlers } from './inputWrapper';
-
-const canvas = getCanvas();
 
 export const timer = timeMs => new Promise(f => setTimeout(f, timeMs));
 

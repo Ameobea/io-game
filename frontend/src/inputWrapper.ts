@@ -5,7 +5,7 @@
 import { getCanvas } from './renderMethods';
 import { continueInit, handleWsMsg } from './index';
 
-const canvas = getCanvas();
+const canvas = getCanvas('canvas-2d');
 
 const gameSocket = new WebSocket('ws://localhost:4000/socket/websocket?vsn=1.0.0');
 

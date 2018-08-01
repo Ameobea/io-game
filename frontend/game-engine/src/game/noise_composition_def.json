@@ -1,0 +1,220 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "type": "root",
+  "settings": [
+    { "id": "e1b0b904-5db9-4da3-970a-7d1c98ad6caf", "key": "moduleType", "value": "Composed" }
+  ],
+  "children": [
+    {
+      "id": "ec79d354-6e4d-4943-8c33-b3ac28f8155d",
+      "type": "compositionScheme",
+      "settings": [
+        {
+          "id": "a133f75b-8dc4-4d0e-bde6-3990a5bf591f",
+          "key": "compositionScheme",
+          "value": "average"
+        }
+      ],
+      "children": []
+    },
+    {
+      "id": "80caaec7-e47c-44e9-91e6-e66b2aaabec7",
+      "type": "globalConf",
+      "settings": [
+        { "id": "c6c2c6f8-dfda-4caa-a6dc-279092ac642a", "key": "speed", "value": "0.008" },
+        { "id": "4079439c-017e-4de6-82d1-4f623f2dfd1d", "key": "zoom", "value": "0.055" },
+        { "id": "e4c649bc-7bc3-4b64-a27e-a63ed62e7054", "key": "colorFunction", "value": "cosmos" }
+      ],
+      "children": []
+    },
+    {
+      "id": "f50f80d8-26a4-43c8-bd4c-2e249ce1ef0e",
+      "type": "inputTransformations",
+      "settings": [],
+      "children": [
+        {
+          "id": "0c760ceb-b8dc-4afb-a524-3a910f864f6d",
+          "type": "inputTransformation",
+          "settings": [
+            {
+              "id": "89881c73-f36e-4ee7-94e0-a5a1e9b286f0",
+              "key": "inputTransformationType",
+              "value": "zoomScale"
+            },
+            { "id": "517a331a-4b87-4145-b075-c9b7ec7b7607", "key": "speed", "value": "0.6" },
+            { "id": "60992e3c-7167-4173-9995-6b032787f516", "key": "zoom", "value": "1" }
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "2f28ad1a-8e3e-4236-988c-73d33295a53e",
+      "type": "noiseModule",
+      "settings": [
+        {
+          "id": "f09f99ed-a8ac-49ce-be80-6f1ba4083e48",
+          "key": "moduleType",
+          "value": "RidgedMulti"
+        },
+        { "id": "dfbae7bc-dca5-42f1-bc94-c7bc57d195c7", "key": "octaves", "value": "6" },
+        { "id": "6eacafb4-f297-4954-9b94-cc86af413e9a", "key": "frequency", "value": "1.0" },
+        { "id": "29bbce69-7fb4-466b-ab4f-71225d483099", "key": "lacunarity", "value": "2.0" },
+        { "id": "af354b1c-b53a-4514-9b39-ce3e3c4bcfb6", "key": "persistence", "value": "0.5" },
+        {
+          "id": "a64f26b5-06b7-4a92-b927-f81b5b15ac52",
+          "key": "seed",
+          "value": "3YRQQJetSaodHS4h3cDurG3cjjTyWmHr"
+        },
+        { "id": "39538221-6c7d-4739-85c0-c9f3c6170e6b", "key": "attenuation", "value": "2.0" }
+      ],
+      "children": [
+        {
+          "id": "87d05528-b5a4-498a-8888-0b9fbd6bc53d",
+          "type": "inputTransformations",
+          "settings": [],
+          "children": [
+            {
+              "id": "dfa94523-a0bb-4d5f-b2b2-6bf7adc09c75",
+              "type": "inputTransformation",
+              "settings": [
+                {
+                  "id": "449d08ce-4107-44bd-b4ff-261e89ae76a3",
+                  "key": "inputTransformationType",
+                  "value": "zoomScale"
+                },
+                { "id": "d96b92c0-6f57-4a75-aeca-1c21fa3c45c7", "key": "speed", "value": "9" },
+                { "id": "d1f87a59-0552-470f-a7e0-b25c62486f8e", "key": "zoom", "value": "0.3" }
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "93847c11-4e6a-401b-b519-f19c1c9bba6d",
+      "type": "noiseModule",
+      "settings": [
+        { "id": "26ca5544-c82e-4872-a8eb-e6ad04f85525", "key": "moduleType", "value": "Composed" },
+        { "id": "20b48e3e-6b60-4b12-b7b7-f5dad17f437b", "key": "octaves", "value": "6" },
+        { "id": "eee1c2e8-9daa-4840-8b5e-2637bf5dea61", "key": "frequency", "value": "1.0" },
+        { "id": "b90e2230-052d-45e5-9e6a-ea3eea837361", "key": "lacunarity", "value": "2.0" },
+        { "id": "59de01e9-c638-419a-ab8d-2b49beaf47b3", "key": "persistence", "value": "0.5" },
+        {
+          "id": "73571e84-85d7-4486-932f-fbec4c463c19",
+          "key": "seed",
+          "value": "3YRQQJetSaodHS4h3cDurG3cjjTyWmHr"
+        }
+      ],
+      "children": [
+        {
+          "id": "2a4973f9-c7a1-4a5d-bf57-955e6bcfd83d",
+          "type": "inputTransformations",
+          "settings": [],
+          "children": [
+            {
+              "id": "bebade80-8ad3-4263-888d-b4f7a68e6cce",
+              "type": "inputTransformation",
+              "settings": [
+                {
+                  "id": "c9f07cea-6dc7-4dc5-b1ce-444f6c091691",
+                  "key": "inputTransformationType",
+                  "value": "zoomScale"
+                },
+                { "id": "c7ad3bd9-3559-4aeb-a6ec-986ba1276a4c", "key": "speed", "value": "3" },
+                { "id": "cb0b9726-aaff-4a8c-b8c5-2150caff395d", "key": "zoom", "value": "0.5" },
+                { "id": "9c9f67c9-1e8a-4838-a4bd-e47f9cd170c7", "key": "zoom", "value": "" }
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "5767fb8a-5f3f-4d6e-92a8-f3a364f6a4ed",
+          "type": "compositionScheme",
+          "settings": [
+            {
+              "id": "1f02cd52-3ac4-486c-972b-1bca33f620c9",
+              "key": "compositionScheme",
+              "value": "average"
+            }
+          ],
+          "children": []
+        },
+        {
+          "id": "94e337a7-310a-4b5b-9d9b-9c08e39fa23d",
+          "type": "noiseModule",
+          "settings": [
+            {
+              "id": "35a410a7-9f40-4f02-b0f0-fa91a6936cf0",
+              "key": "moduleType",
+              "value": "Billow"
+            },
+            { "id": "bfef133c-6bd4-4555-bbbe-0876db5c5d5b", "key": "octaves", "value": "6" },
+            { "id": "60627ced-76a4-4134-9c03-f7ac49e75b7c", "key": "frequency", "value": "1.0" },
+            { "id": "1b8cb933-f07d-414a-843e-e1ca1ee935f4", "key": "lacunarity", "value": "2.0" },
+            { "id": "a818686b-d735-4cf3-851e-886a352448ce", "key": "persistence", "value": "0.5" },
+            {
+              "id": "d033eb1d-ac48-4e4a-bcd8-d017cb1344a5",
+              "key": "seed",
+              "value": "3YRQQJetSaodHS4h3cDurG3cjjTyWmHr"
+            }
+          ],
+          "children": [
+            {
+              "id": "280c0e4e-67eb-4921-bba4-2fd852705294",
+              "type": "inputTransformations",
+              "settings": [],
+              "children": [
+                {
+                  "id": "c6e9f3ab-ec59-4760-bd28-c49af0ce9ae5",
+                  "type": "inputTransformation",
+                  "settings": [
+                    {
+                      "id": "5f0e3753-042e-4bf8-985e-7cce1fd2247d",
+                      "key": "inputTransformationType",
+                      "value": "scaleAll"
+                    },
+                    { "id": "f26392a5-0828-4db1-807c-d947da8c4f11", "key": "speed", "value": "1" },
+                    { "id": "4d17c599-9816-4e13-a52b-10a78dd934a6", "key": "zoom", "value": "1" },
+                    {
+                      "id": "9cc1012d-c2cc-4a1d-b07a-6b867525faa8",
+                      "key": "scaleFactor",
+                      "value": "2.3"
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "be7937d9-c8fd-4f5c-90c0-4a76a6eb6bf9",
+          "type": "noiseModule",
+          "settings": [
+            {
+              "id": "f14d3b7a-2e79-4789-96f5-6c3990728088",
+              "key": "moduleType",
+              "value": "Constant"
+            },
+            { "id": "f22e0919-bd26-4d5c-a97e-fe89dd65ec26", "key": "octaves", "value": "6" },
+            { "id": "56fff96f-6d03-4195-aa00-62802c092643", "key": "frequency", "value": "1.0" },
+            { "id": "59df5d32-28e4-42dc-8c3b-84b253fa6338", "key": "lacunarity", "value": "2.0" },
+            { "id": "501c61db-2030-4e24-a02c-3956f9de5a46", "key": "persistence", "value": "0.5" },
+            { "id": "1b1a8c43-8618-4385-bc9b-e4ee29e49533", "key": "constant", "value": "-0.3" }
+          ],
+          "children": [
+            {
+              "id": "7f870038-3d63-44e3-8091-031d5b0d081c",
+              "type": "inputTransformations",
+              "settings": [],
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

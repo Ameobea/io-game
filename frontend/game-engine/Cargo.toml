@@ -9,10 +9,15 @@ protobuf-codegen-pure = "2.0.3"
 serde_json = "1.0.24"
 
 [dependencies]
-lazy_static = "*"
+lazy_static = "1.0.2"
 nalgebra = "0.16.0"
 ncollide2d = "0.17.0"
+noise = "0.5.1"
 protobuf = "2.0.4"
+
+[dependencies.libcomposition]
+default-features = false
+git = "https://github.com/Ameobea/noise-asmjs.git"
 
 [dependencies.uuid]
 features = ["u128"]

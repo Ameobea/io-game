@@ -16,12 +16,18 @@
 
     canvas {
       border: 1px solid #555;
+      position: absolute;
+    }
+
+    #canvas-2d {
+      background-color: rgba(0,0,0,0);
     }
   </style>
 </head>
 
 <body>
-  <canvas height="600" width="600"></canvas>
+  <canvas height="600" width="600" id="canvas-webgl"></canvas>
+  <canvas height="600" width="600" id="canvas-2d"></canvas>
 </body>
 
 </html>

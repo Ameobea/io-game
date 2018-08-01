@@ -2,5 +2,6 @@
 
 pub mod effects;
 pub mod entities;
+pub mod noise;
 
 pub use self::entities::player::PlayerEntity;

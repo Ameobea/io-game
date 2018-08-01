@@ -15,6 +15,8 @@ extern crate uuid;
 extern crate wasm_bindgen;
 #[macro_use]
 extern crate lazy_static;
+extern crate libcomposition;
+extern crate noise;
 
 use std::panic;
 
@@ -33,7 +35,9 @@ pub mod render_effects;
 pub mod user_input;
 pub mod util;
 
-use game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
+use game_state::{
+    get_effects_manager, get_state, player_entity_fastpath, GameState, EFFECTS_MANAGER, STATE,
+};
 use phoenix_proto::{join_game_channel, send_connect_message};
 use proto_utils::{parse_server_message, InnerServerMessage};
 use protos::server_messages::{AsteroidEntity, CreationEvent_oneof_entity as EntityType};
@@ -58,6 +62,8 @@ extern "C" {
     pub fn render_line(r: u8, g: u8, b: u8, width: u16, x1: u16, y1: u16, x2: u16, y2: u16);
     pub fn fill_poly(r: u8, g: u8, b: u8, vertex_coords: &[f32]);
     pub fn render_point(r: u8, g: u8, b: u8, x: u16, y: u16);
+    pub fn create_background_bitmap(height: usize, width: usize, texture_data: &[u8]);
+    pub fn draw_background(offset_x: usize, offset_y: usize);
 }
 
 #[wasm_bindgen(module = "./inputWrapper")]
@@ -77,6 +83,9 @@ pub fn init() {
     let effects_manager = box RenderEffectManager::new();
     unsafe { EFFECTS_MANAGER = Box::into_raw(effects_manager) };
 
+    let background_texture = game::noise::generate_background_bitmap(1500, 1500);
+    create_background_bitmap(1500, 1500, &background_texture);
+
     send_connect_message();
 }
 
@@ -91,6 +100,9 @@ pub fn handle_message(bytes: &[u8]) {
 
 #[wasm_bindgen]
 pub fn tick() {
+    let player_pos = player_entity_fastpath().pos;
+    draw_background(player_pos.x as usize, player_pos.y as usize);
+
     let cur_tick = get_state().tick();
     get_effects_manager().render_all(cur_tick);
 }
