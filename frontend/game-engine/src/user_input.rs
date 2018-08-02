@@ -15,8 +15,7 @@ pub fn handle_mouse_down(x: u16, y: u16) {
     let effect = DemoCircle {
         color: Color::random(),
         width: 2,
-        x: x as f32,
-        y: y as f32,
+        pos: Point2::new(x as f32, y as f32),
         cur_size: 0.,
         max_size: 10.,
         increment: 3.4,

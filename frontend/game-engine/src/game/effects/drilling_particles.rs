@@ -1,6 +1,6 @@
-use super::super::super::render_quad;
 use nalgebra::{Point2, Vector2};
 use render_effects::RenderEffect;
+use render_methods::render_quad;
 use util::{math_random, Color};
 
 pub struct DrillingParticles {
@@ -41,25 +41,12 @@ impl DrillingParticles {
     }
 }
 
-fn render_drill_particle(pos: Point2<f32>, color: &Color) {
-    render_quad(
-        color.red,
-        color.green,
-        color.blue,
-        pos.x as u16,
-        pos.y as u16,
-        2,
-        2,
-    );
-}
-
 impl RenderEffect for DrillingParticles {
     fn tick_and_render(&mut self, cur_tick: usize) -> bool {
         for dir in &self.particle_vectors {
-            render_drill_particle(
-                self.pos + (self.particle_velocity * (cur_tick - self.start_tick) as f32 * dir),
-                &self.color,
-            );
+            let adjusted_pos =
+                self.pos + (self.particle_velocity * (cur_tick - self.start_tick) as f32 * dir);
+            render_quad(&self.color, adjusted_pos, 2, 2);
         }
 
         self.start_tick + self.dur_ticks == cur_tick

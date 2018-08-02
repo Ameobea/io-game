@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::mem;
 use std::ptr;
 
-use nalgebra::{Isometry2, Point2, Vector2};
+use nalgebra::{Point2, Vector2};
 use ncollide2d::bounding_volume::{aabb::AABB, BoundingVolume};
 use ncollide2d::partitioning::{BVTVisitor, DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
@@ -105,6 +105,7 @@ impl GameState {
                     warn("Received entity creation update with no inner entity payload")
                 },
                 Some(StatusPayload::other(SimpleEvent::DELETION)) => {
+                    // Remove the entity from the UUID map as well as the DBVT
                     let (leaf_id, _) = match self.uuid_map.remove(&entity_id) {
                         Some(entry) => entry,
                         None => {
@@ -174,18 +175,7 @@ impl GameState {
                 Point2::new(translation.x, translation.y),
                 player.get_size() as u16,
             ),
-            EntityType::asteroid(asteroid) => box Asteroid::new(
-                asteroid
-                    .get_vert_coords()
-                    .chunks(2)
-                    .map(|pt| Point2::new(pt[0], pt[1]))
-                    .collect(),
-                Isometry2::new(translation, asteroid.get_rotation()),
-                Isometry2::new(
-                    Vector2::new(asteroid.get_velocity_x(), asteroid.get_velocity_y()),
-                    asteroid.get_delta_rotation(),
-                ),
-            ),
+            EntityType::asteroid(asteroid) => box Asteroid::from_proto(asteroid, translation),
         };
 
         let leaf = DBVTLeaf::new(boxed_entity.get_bounding_volume(), entity_id);

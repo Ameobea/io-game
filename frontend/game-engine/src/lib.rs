@@ -32,6 +32,7 @@ pub mod physics;
 pub mod proto_utils;
 pub mod protos;
 pub mod render_effects;
+pub mod render_methods;
 pub mod user_input;
 pub mod util;
 
@@ -43,6 +44,22 @@ use proto_utils::{parse_server_message, InnerServerMessage};
 use protos::server_messages::{AsteroidEntity, CreationEvent_oneof_entity as EntityType};
 use render_effects::RenderEffectManager;
 use util::{error, v4_uuid};
+
+#[wasm_bindgen(module = "./inputWrapper")]
+extern "C" {
+    pub fn send_message(msg: Vec<u8>);
+}
+
+#[wasm_bindgen(module = "./webgl")]
+extern "C" {
+    pub fn create_background_texture(height: usize, width: usize, texture_data: &[u8]);
+    pub fn draw_background(
+        player_pos_x: f32,
+        player_pos_y: f32,
+        texture_width: usize,
+        texture_height: usize,
+    );
+}
 
 #[wasm_bindgen(module = "./renderMethods")]
 extern "C" {
@@ -64,20 +81,17 @@ extern "C" {
     pub fn render_point(r: u8, g: u8, b: u8, x: u16, y: u16);
 }
 
-#[wasm_bindgen(module = "./inputWrapper")]
-extern "C" {
-    pub fn send_message(msg: Vec<u8>);
-}
-
-#[wasm_bindgen(module = "./webgl")]
-extern "C" {
-    pub fn create_background_texture(height: usize, width: usize, texture_data: &[u8]);
-    pub fn draw_background(offset_x: usize, offset_y: usize);
-}
+static mut CANVAS_WIDTH: f32 = 0.0;
+static mut CANVAS_HEIGHT: f32 = 0.0;
 
 #[wasm_bindgen]
-pub fn init() {
+pub fn init(canvas_width: f32, canvas_height: f32) {
     panic::set_hook(Box::new(|info: &panic::PanicInfo| error(info.to_string())));
+
+    unsafe {
+        CANVAS_WIDTH = canvas_width;
+        CANVAS_HEIGHT = canvas_height;
+    }
 
     let player_id = join_game_channel();
 
@@ -105,7 +119,7 @@ pub fn handle_message(bytes: &[u8]) {
 #[wasm_bindgen]
 pub fn tick() {
     let player_pos = player_entity_fastpath().pos;
-    draw_background(player_pos.x as usize, player_pos.y as usize);
+    draw_background(player_pos.x, player_pos.y, 1500, 1500);
 
     let cur_tick = get_state().tick();
     get_effects_manager().render_all(cur_tick);

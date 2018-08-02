@@ -4,9 +4,11 @@ use ncollide2d::bounding_volume::{aabb::AABB, HasBoundingVolume};
 use ncollide2d::query::RayCast;
 use ncollide2d::shape::{Polyline, Shape};
 
-use super::super::super::fill_poly;
 use entity::Entity;
-use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
+use protos::server_messages::{
+    AsteroidEntity as ProtoAsteroidEntity, ServerMessage_oneof_payload as ServerMessageContent,
+};
+use render_methods::fill_poly;
 use util::Color;
 
 pub struct Asteroid {
@@ -15,6 +17,7 @@ pub struct Asteroid {
     pub color: Color,
     pub delta_isometry: Isometry2<f32>,
     poly_line: Polyline<f32>,
+    transformed_coords_buffer: Vec<f32>,
 }
 
 impl Asteroid {
@@ -24,6 +27,7 @@ impl Asteroid {
         delta_isometry: Isometry2<f32>,
     ) -> Self {
         let poly_line = Polyline::new(verts.clone());
+        let vert_count = verts.len();
 
         Asteroid {
             verts,
@@ -31,7 +35,23 @@ impl Asteroid {
             delta_isometry,
             color: Color::random(),
             poly_line,
+            transformed_coords_buffer: Vec::with_capacity(vert_count * 2),
         }
+    }
+
+    pub fn from_proto(asteroid: &ProtoAsteroidEntity, translation: Vector2<f32>) -> Self {
+        Asteroid::new(
+            asteroid
+                .get_vert_coords()
+                .chunks(2)
+                .map(|pt| Point2::new(pt[0], pt[1]))
+                .collect(),
+            Isometry2::new(translation, asteroid.get_rotation()),
+            Isometry2::new(
+                Vector2::new(asteroid.get_velocity_x(), asteroid.get_velocity_y()),
+                asteroid.get_delta_rotation(),
+            ),
+        )
     }
 }
 
@@ -47,19 +67,19 @@ impl Shape<f32> for Asteroid {
 
 impl Entity for Asteroid {
     fn render(&self, _cur_tick: usize) {
-        // TODO: Cache the calculated transformed polyline?
-        let coords: Vec<f32> = self
-            .verts
-            .iter()
-            .map(|pt| -> Point2<f32> { self.isometry * pt })
-            .flat_map(|pt| vec![pt.x, pt.y])
-            .collect();
-
-        fill_poly(self.color.red, self.color.green, self.color.blue, &coords);
+        fill_poly(&self.color, &self.transformed_coords_buffer);
     }
 
     fn tick(&mut self, _tick: usize) -> bool {
         self.isometry *= self.delta_isometry;
+
+        self.transformed_coords_buffer.clear();
+        for vert in &self.verts {
+            let transformed_point = self.isometry * vert;
+            self.transformed_coords_buffer.push(transformed_point.x);
+            self.transformed_coords_buffer.push(transformed_point.y);
+        }
+
         self.delta_isometry != Isometry2::new(Vector2::new(0., 0.), 0.)
     }
 

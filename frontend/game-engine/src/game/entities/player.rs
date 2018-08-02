@@ -2,7 +2,6 @@ use nalgebra::{Isometry2, Point2, Vector2};
 use ncollide2d::bounding_volume::aabb::AABB;
 use ncollide2d::shape::Shape;
 
-use super::super::super::{render_line, render_quad};
 use conf::CONF;
 use entity::Entity;
 use game::effects::DrillingParticles;
@@ -12,6 +11,7 @@ use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::{
     MovementUpdate, ServerMessage_oneof_payload as ServerMessageContent,
 };
+use render_methods::{render_line, render_quad};
 use util::{error, log, Color, ISOMETRY_ZERO};
 
 use super::super::effects::DemoCircle;
@@ -19,10 +19,10 @@ use super::super::effects::DemoCircle;
 fn player_vertices(size: u16) -> Vec<Point2<f32>> {
     let half_perim = 0.5 * (size as f32);
     vec![
-        Point2::new(-half_perim, half_perim),
         Point2::new(half_perim, half_perim),
-        Point2::new(half_perim, -half_perim),
+        Point2::new(-half_perim, half_perim),
         Point2::new(-half_perim, -half_perim),
+        Point2::new(half_perim, -half_perim),
     ]
 }
 
@@ -124,30 +124,14 @@ impl Shape<f32> for PlayerEntity {
 impl Entity for PlayerEntity {
     fn render(&self, cur_tick: usize) {
         // Draw entity body
-        render_quad(
-            self.color.red,
-            self.color.green,
-            self.color.blue,
-            self.pos.x as u16,
-            self.pos.y as u16,
-            self.size,
-            self.size,
-        );
+        render_quad(&self.color, self.pos, self.size, self.size);
 
         let beam_len: f32 = 25.;
         let beam_vec = self.beam_rotation * beam_len;
         let beam_gun_endpoint = self.pos + beam_vec;
+
         // Draw beam gun
-        render_line(
-            self.color.red,
-            self.color.green,
-            self.color.blue,
-            8,
-            self.pos.x as u16,
-            self.pos.y as u16,
-            beam_gun_endpoint.x as u16,
-            beam_gun_endpoint.y as u16,
-        );
+        render_line(&self.color, 8, self.pos, beam_gun_endpoint);
 
         // Draw beam if beam is active
         if !self.beam_active {
@@ -213,40 +197,26 @@ impl Entity for PlayerEntity {
                 },
             );
             get_effects_manager().add_effect(box drilling_effect);
-
-            (
-                &Color {
-                    red: 255,
-                    green: 0,
-                    blue: 0,
-                },
-                nearest_collision,
-            )
+            let color = &Color {
+                red: 255,
+                green: 0,
+                blue: 0,
+            };
+            (color, nearest_collision)
         } else {
-            (
-                if broad_phase_miss {
-                    &Color {
-                        red: 0,
-                        green: 0,
-                        blue: 255,
-                    }
-                } else {
-                    &self.color
-                },
-                beam_endpoint,
-            )
+            let color = if broad_phase_miss {
+                &Color {
+                    red: 0,
+                    green: 0,
+                    blue: 255,
+                }
+            } else {
+                &self.color
+            };
+            (color, beam_endpoint)
         };
 
-        render_line(
-            line_color.red,
-            line_color.green,
-            line_color.blue,
-            1,
-            beam_start.x as u16,
-            beam_start.y as u16,
-            beam_endpoint.x as u16,
-            beam_endpoint.y as u16,
-        );
+        render_line(&line_color, 1, beam_start, beam_endpoint);
     }
 
     fn tick(&mut self, tick: usize) -> bool {
@@ -257,8 +227,7 @@ impl Entity for PlayerEntity {
             let effect = DemoCircle {
                 color: Color::random(),
                 width: 3,
-                x: self.pos.x,
-                y: self.pos.y + 50.,
+                pos: Point2::new(self.pos.x, self.pos.y + 50.),
                 cur_size: 0.,
                 max_size: 50.,
                 increment: 0.5,

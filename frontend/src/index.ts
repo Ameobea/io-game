@@ -13,7 +13,7 @@ const wsInitPromise = new Promise(f => {
 
 export let handleWsMsg: (msg: ArrayBuffer) => void;
 
-const createAsteroidSpawner = engine => (x, y) =>
+const createAsteroidSpawner = engine => (x: number, y: number) =>
   engine.spawn_asteroid(
     new Float32Array(
       [0, -20, 5, -14, 10, -7, 15, 0, 8, 8, 3, 17, 0, 18, -5, 12, -8, -2, -5, -12].map(
@@ -32,14 +32,14 @@ wasm
   .then(async engine => {
     (window as any).handle_message = engine.handle_channel_message;
 
-    initWebGL();
+    const { canvasHeight, canvasWidth } = initWebGL();
 
     // Wait for the websocket to connect
     await wsInitPromise;
 
     // Initialize internal game state and provide better error messages when the underlying Rust
     // code panics.
-    engine.init();
+    engine.init(canvasHeight, canvasWidth);
     initEventHandlers(engine);
     handleWsMsg = (ab: ArrayBuffer) => engine.handle_channel_message(new Uint8Array(ab));
 
