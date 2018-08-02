@@ -6,7 +6,26 @@ defmodule Backend.ProtoMessage do
     Event,
     PhoenixEvent,
     ServerChannelMessage,
+    ServerMessage,
+    ServerError,
   }
+
+  def encode_socket_message(%Phoenix.Socket.Message{payload: %{status: :error}} = message) do
+    ServerChannelMessage.encode(ServerChannelMessage.new(%{
+      topic: "rooms:game",
+      event: Event.new(%{payload: {:phoenix_event, PhoenixEvent.value(:Error)}}),
+      ref: nil,
+      payload: ServerMessage.new(%{
+        id: Uuid.new(%{data_1: 0, data_2: 0}),
+        payload: {
+          :error,
+          ServerError.new(%{
+            reason: message.payload[:response][:reason],
+          }),
+        },
+      }),
+    }))
+  end
 
   def encode_socket_message(%Phoenix.Socket.Message{} = message) do
     IO.inspect ["payload", message.payload]
@@ -35,7 +54,7 @@ defmodule Backend.ProtoMessage do
     UUID.uuid4() |> to_proto_uuid
   end
 
-  def encode_game_state_to_snapshot(game_state) do
+  def encode_game_state_to_snapshot(%{} = game_state) do
     items = game_state
       |> Map.to_list()
       |> Enum.map(&to_snapshot_item/1)

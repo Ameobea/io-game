@@ -69,7 +69,7 @@ pub fn generate_background_texture(width: usize, height: usize) -> Vec<u8> {
     let mut pixel_data: Vec<u8> = Vec::with_capacity(width * height * 4);
     for y in 0..height {
         for x in 0..width {
-            let val = tree.get([x as f64, y as f64, 0.0]) as f32;
+            let val = tree.get([x as f64, y as f64]) as f32;
             let color = color_fn.colorize(val);
             pixel_data.push(color[0]);
             pixel_data.push(color[1]);

@@ -18,6 +18,7 @@ protobuf = "2.0.4"
 [dependencies.libcomposition]
 default-features = false
 git = "https://github.com/Ameobea/noise-asmjs.git"
+rev = "noise2d"
 
 [dependencies.uuid]
 features = ["u128"]

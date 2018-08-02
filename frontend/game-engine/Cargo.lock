@@ -149,7 +149,7 @@ version = "0.1.0"
 dependencies = [
  "handlebars 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libcomposition 0.1.0 (git+https://github.com/Ameobea/noise-asmjs.git)",
+ "libcomposition 0.1.0 (git+https://github.com/Ameobea/noise-asmjs.git?rev=noise2d)",
  "nalgebra 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ncollide2d 0.17.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "noise 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -252,7 +252,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "libcomposition"
 version = "0.1.0"
-source = "git+https://github.com/Ameobea/noise-asmjs.git#a899e686eb9df8da74b507741390863bbc068700"
+source = "git+https://github.com/Ameobea/noise-asmjs.git?rev=noise2d#d388237de7d41198978c8f92965d23d1035641b4"
 dependencies = [
  "itertools 0.7.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -861,7 +861,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum jpeg-decoder 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)" = "c8b7d43206b34b3f94ea9445174bda196e772049b9bddbc620c9d29b2d20110d"
 "checksum lazy_static 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "fb497c35d362b6a331cfd94956a07fc2c78a4604cdbee844a81170386b996dd3"
 "checksum libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)" = "b685088df2b950fccadf07a7187c8ef846a959c142338a48f9dc0b94517eb5f1"
-"checksum libcomposition 0.1.0 (git+https://github.com/Ameobea/noise-asmjs.git)" = "<none>"
+"checksum libcomposition 0.1.0 (git+https://github.com/Ameobea/noise-asmjs.git?rev=noise2d)" = "<none>"
 "checksum libm 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "03c0bb6d5ce1b5cc6fd0578ec1cbc18c9d88b5b591a5c7c1d6c6175e266a0819"
 "checksum log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "61bd98ae7f7b754bc53dca7d44b604f733c6bba044ea6f41bc8d89272d8161d2"
 "checksum lzw 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7d947cbb889ed21c2a84be6ffbaebf5b4e0f4340638cba0444907e38b56be084"

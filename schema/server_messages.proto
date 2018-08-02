@@ -52,11 +52,16 @@ message MovementUpdate {
   float velocity_y = 4; // pixels/tick (60 ticks/second)
 }
 
+message ServerError {
+  string reason = 1;
+}
+
 message ServerMessage {
   Uuid id = 1;
   oneof payload {
     MovementUpdate movement_update = 2;
     StatusUpdate status_update = 3;
     Snapshot snapshot = 4;
+    ServerError error = 5;
   }
 }
