@@ -41,7 +41,6 @@ defmodule BackendWeb.GameLoop do
     GameState.list_topics()
     |> update_topics(time_difference, messages)
 
-    # asd = GameState.list("rooms:game")
     {curr_time, %{}}
   end
 
@@ -52,16 +51,30 @@ defmodule BackendWeb.GameLoop do
     update_topics(rest, time_diff, messages)
   end
 
-  defp update_topic(topic_state, _time_diff, _player_inputs) do
+  defp update_topic(topic_state, time_diff, player_inputs) do
     player_ids = Map.keys(topic_state)
-    update_players(topic_state, player_ids)
+    update_players(topic_state, player_ids, time_diff, player_inputs)
   end
 
-  defp update_players(topic_state, []), do: topic_state
-  defp update_players(topic_state, [player_id | rest]) do
+  defp update_players(topic_state, [], _time_diff, _player_inputs), do: topic_state
+  defp update_players(topic_state, [player_id | rest], time_diff, player_inputs) do
     topic_state
-    |> Map.update(player_id, %{}, &(&1))
+    |> Map.update(player_id, %{}, &run_game_tick_on_player(&1, time_diff, player_inputs[player_id]))
     |> update_players(rest)
+  end
+
+  defp run_game_tick_on_player(player_state, time_diff, player_input) do
+    input = Map.merge(player_state.input, player_input)
+    %{
+      pos_x: 0,
+      pos_y: 0,
+      size: 100,
+      velocity_x: 0,
+      velocity_y: 0,
+      input: Map.merge(%{}, player_input)
+    }
+    # put physics calculation here
+    Map.put(player_state, :input, input)
   end
 
   defp calculate_messages(nil), do: %{}

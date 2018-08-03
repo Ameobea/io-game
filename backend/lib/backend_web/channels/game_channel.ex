@@ -27,6 +27,11 @@ defmodule BackendWeb.GameChannel do
       size: 100,
       velocity_x: 0,
       velocity_y: 0,
+      input: %{
+        player_move: :STOP,
+        beam_rotation: BeamAim.new(%{x: 0, y: 0})
+        beam_toggle: false,
+      },
     })
     proto_game_state = GameState.get_topic(socket.topic) |> ProtoMessage.encode_game_state_to_snapshot
     push socket, "current_game_state", proto_game_state
