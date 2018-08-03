@@ -35,11 +35,7 @@ defmodule BackendWeb.GameState do
   end
 
   def handle_call({:get_topic, topic}, _from, state) do
-    if is_nil(state[topic]) do
-      IO.puts("ERROR: no state stored for topic #{topic}")
-    end
-
-    {:reply, state[topic], state}
+    {:reply, Map.get(state, topic, %{}), state}
   end
 
   def handle_call(:list_topics, _from, state) do

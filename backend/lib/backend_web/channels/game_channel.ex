@@ -21,8 +21,6 @@ defmodule BackendWeb.GameChannel do
   end
 
   def handle_info(:after_join, socket) do
-    proto_game_state = GameState.get_topic(socket.topic) |> ProtoMessage.encode_game_state_to_snapshot
-    push socket, "current_game_state", proto_game_state
     :ok = GameState.track_player(socket.topic, socket.assigns.player_id, %{
       pos_x: 0,
       pos_y: 0,
@@ -30,13 +28,14 @@ defmodule BackendWeb.GameChannel do
       velocity_x: 0,
       velocity_y: 0,
     })
+    proto_game_state = GameState.get_topic(socket.topic) |> ProtoMessage.encode_game_state_to_snapshot
+    push socket, "current_game_state", proto_game_state
     {:noreply, socket}
   end
 
   def handle_in("game", %ClientMessage{payload: payload}, socket) do
-    IO.inspect ["handle_in game payload", payload]
+    # IO.inspect ["handle_in game payload", payload]
     handle_payload("game", payload, socket)
-    # client_message = ClientMessage.decode(data)
     {:noreply, socket}
   end
 

@@ -13,15 +13,13 @@ defmodule Backend.ProtoMessage do
   def encode_socket_message(%Phoenix.Socket.Message{payload: %{status: :error}} = message) do
     ServerChannelMessage.encode(ServerChannelMessage.new(%{
       topic: "rooms:game",
-      event: Event.new(%{payload: {:phoenix_event, PhoenixEvent.value(:Error)}}),
+      event: Event.new(%{payload: {:phoenix_event, :Error}}),
       ref: nil,
       payload: ServerMessage.new(%{
         id: Uuid.new(%{data_1: 0, data_2: 0}),
         payload: {
           :error,
-          ServerError.new(%{
-            reason: message.payload[:response][:reason],
-          }),
+          ServerError.new(%{reason: message.payload.response.reason}),
         },
       }),
     }))
