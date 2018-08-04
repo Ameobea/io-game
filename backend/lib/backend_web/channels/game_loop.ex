@@ -60,10 +60,10 @@ defmodule BackendWeb.GameLoop do
   defp update_players(topic_state, [player_id | rest], time_diff, player_inputs) do
     topic_state
     |> Map.update(player_id, %{}, &run_game_tick_on_player(&1, time_diff, player_inputs[player_id]))
-    |> update_players(rest)
+    |> update_players(rest, time_diff, player_inputs)
   end
 
-  defp run_game_tick_on_player(player_state, time_diff, player_input) do
+  defp run_game_tick_on_player(player_state, _time_diff, player_input) do
     input = Map.merge(player_state.input, player_input)
     %{
       pos_x: 0,

@@ -29,7 +29,7 @@ defmodule BackendWeb.GameChannel do
       velocity_y: 0,
       input: %{
         player_move: :STOP,
-        beam_rotation: BeamAim.new(%{x: 0, y: 0})
+        beam_rotation: BeamAim.new(%{x: 0, y: 0}),
         beam_toggle: false,
       },
     })

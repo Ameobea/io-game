@@ -8,6 +8,9 @@ defmodule Backend.ProtoMessage do
     ServerChannelMessage,
     ServerMessage,
     ServerError,
+    Snapshot,
+    CreationEvent,
+    PlayerEntity,
   }
 
   def encode_socket_message(%Phoenix.Socket.Message{payload: %{status: :error}} = message) do
