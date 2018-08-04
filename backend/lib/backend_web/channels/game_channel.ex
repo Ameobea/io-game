@@ -39,7 +39,6 @@ defmodule BackendWeb.GameChannel do
   end
 
   def handle_in("game", %ClientMessage{payload: payload}, socket) do
-    # IO.inspect ["handle_in game payload", payload]
     handle_payload("game", payload, socket)
     {:noreply, socket}
   end

@@ -43,7 +43,8 @@ defmodule BackendWeb.GameState do
   end
 
   def handle_call({:update_topic, topic, update_fn}, _from, state) do
-    {:reply, :ok, Map.update(state, topic, %{}, update_fn)}
+    new_state = Map.update(state, topic, %{}, update_fn)
+    {:reply, new_state, new_state}
   end
 
   defp deep_merge(left, right), do: Map.merge(left, right, &merge_inner/3)

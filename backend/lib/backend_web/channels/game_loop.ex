@@ -47,7 +47,14 @@ defmodule BackendWeb.GameLoop do
   defp update_topics([], _time_diff, _messages), do: nil
   defp update_topics([topic | rest], time_diff, messages) do
     player_inputs = calculate_messages(messages[topic])
-    GameState.update_topic(topic, &update_topic(&1, time_diff, player_inputs))
+
+    snapshot = topic
+      |> GameState.update_topic(&update_topic(&1, time_diff, player_inputs))
+      |> Enum.filter(fn {_k, val} -> val.needs_update end)
+      |> Map.new
+      |> Backend.ProtoMessage.encode_game_state_to_snapshot
+
+    BackendWeb.Endpoint.broadcast! topic, "snapshot", snapshot
     update_topics(rest, time_diff, messages)
   end
 
@@ -71,7 +78,8 @@ defmodule BackendWeb.GameLoop do
       size: 100,
       velocity_x: 0,
       velocity_y: 0,
-      input: Map.merge(%{}, player_input)
+      input: Map.merge(%{}, player_input),
+      needs_update: !(input == player_state.input),
     }
     # put physics calculation here
     Map.put(player_state, :input, input)
