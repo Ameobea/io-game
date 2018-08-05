@@ -14,6 +14,9 @@ const { ctx2D, ctx2DBackground } = (() => {
   return { ctx2D: ctx, ctx2DBackground };
 })();
 
+ctx2D.shadowOffsetX = 0;
+ctx2D.shadowOffsetY = 0;
+
 export const clearCanvas = () => ctx2D.clearRect(0, 0, canvas2D.width, canvas2D.height);
 
 export const render_quad = (
@@ -25,10 +28,13 @@ export const render_quad = (
   width: number,
   height: number
 ) => {
+  ctx2D.shadowBlur = 16;
   const color = `rgb(${r},${g},${b})`;
   ctx2D.strokeStyle = color;
+  ctx2D.shadowColor = `rgb(${r},${g},${b})`;
   ctx2D.fillStyle = color;
   ctx2D.fillRect(x, y, width, height);
+  ctx2D.shadowBlur = 0;
 };
 
 export const render_arc = (
@@ -71,8 +77,10 @@ export const render_line = (
 };
 
 export const fill_poly = (r: number, g: number, b: number, vertex_coords: number[]) => {
+  ctx2D.shadowBlur = 16;
   const color = `rgb(${r},${g},${b})`;
   ctx2D.fillStyle = color;
+  ctx2D.shadowColor = `rgb(${r},${g},${b})`;
 
   ctx2D.beginPath();
   for (let i = 0; i < vertex_coords.length; i += 2) {
@@ -80,10 +88,11 @@ export const fill_poly = (r: number, g: number, b: number, vertex_coords: number
   }
   ctx2D.closePath();
   ctx2D.fill();
+  ctx2D.shadowBlur = 0;
 };
 
 export const render_point = (r: number, g: number, b: number, x: number, y: number) => {
   const color = `rgb(${r},${g},${b})`;
   ctx2D.fillStyle = color;
-  ctx2D.fillRect(x, y, 1, 1);
+  ctx2D.fillRect(x, y, 2, 2);
 };

@@ -1,13 +1,8 @@
 use std::fmt::Debug;
 use std::mem;
 
-use nalgebra::Isometry2;
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
-
-lazy_static! {
-    pub static ref ISOMETRY_ZERO: Isometry2<f32> = Isometry2::identity();
-}
 
 #[wasm_bindgen]
 extern "C" {

@@ -1,6 +1,6 @@
 use nalgebra::{Point2, Vector2};
 use render_effects::RenderEffect;
-use render_methods::render_quad;
+use render_methods::render_point;
 use util::{math_random, Color};
 
 pub struct DrillingParticles {
@@ -46,7 +46,7 @@ impl RenderEffect for DrillingParticles {
         for dir in &self.particle_vectors {
             let adjusted_pos =
                 self.pos + (self.particle_velocity * (cur_tick - self.start_tick) as f32 * dir);
-            render_quad(&self.color, adjusted_pos, 2, 2);
+            render_point(&self.color, adjusted_pos);
         }
 
         self.start_tick + self.dur_ticks == cur_tick

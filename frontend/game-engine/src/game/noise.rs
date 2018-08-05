@@ -63,7 +63,7 @@ fn get_composition_tree() -> CompositionTree {
 }
 
 pub fn generate_background_texture(width: usize, height: usize) -> Vec<u8> {
-    let color_fn = ColorFunction::Cosmos;
+    let color_fn = ColorFunction::Oceanic;
     let tree = get_composition_tree();
 
     let mut pixel_data: Vec<u8> = Vec::with_capacity(width * height * 4);

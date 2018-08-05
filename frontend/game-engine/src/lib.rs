@@ -118,7 +118,7 @@ pub fn handle_message(bytes: &[u8]) {
 
 #[wasm_bindgen]
 pub fn tick() {
-    let player_pos = player_entity_fastpath().pos;
+    let player_pos = player_entity_fastpath().pos();
     draw_background(player_pos.x, player_pos.y, 1500, 1500);
 
     let cur_tick = get_state().tick();

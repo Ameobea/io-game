@@ -1,4 +1,4 @@
-use nalgebra::{Isometry2, Point2, Vector2};
+use nalgebra::{Isometry2, Point2, Translation2, Vector2};
 use ncollide2d::bounding_volume::aabb::AABB;
 use ncollide2d::shape::Shape;
 
@@ -12,7 +12,7 @@ use protos::server_messages::{
     MovementUpdate, ServerMessage_oneof_payload as ServerMessageContent,
 };
 use render_methods::{render_line, render_quad};
-use util::{error, log, Color, ISOMETRY_ZERO};
+use util::{error, log, Color};
 
 use super::super::effects::DemoCircle;
 
@@ -30,7 +30,7 @@ fn player_vertices(size: u16) -> Vec<Point2<f32>> {
 /// a unique color.
 pub struct PlayerEntity {
     color: Color,
-    pub pos: Point2<f32>,
+    isometry: Isometry2<f32>,
     /// Which way the user is telling this entity to go
     pub direction_input: Direction,
     /// Velocity vector along the x/y axises in pixels/tick
@@ -49,7 +49,7 @@ impl PlayerEntity {
     pub fn new(pos: Point2<f32>, size: u16) -> Self {
         PlayerEntity {
             color: Color::random(),
-            pos,
+            isometry: Isometry2::new(Vector2::new(pos.x, pos.y), 0.0),
             direction_input: Direction::STOP,
             velocity: Vector2::zeros(),
             size,
@@ -74,7 +74,7 @@ impl PlayerEntity {
             "{}, {}, {}, {}",
             pos_x, pos_y, velocity_x, velocity_y
         ));
-        self.pos = Point2::new(pos_x, pos_y);
+        self.isometry.translation = Translation2::from_vector(Vector2::new(pos_x, pos_y));
         self.velocity = Vector2::new(velocity_x, velocity_y);
     }
 
@@ -98,25 +98,44 @@ impl PlayerEntity {
             self.velocity += movement_diff;
         }
 
-        self.pos += self.velocity;
-        self.pos *= 1. - CONF.physics.friction_per_tick;
+        self.isometry.translation.vector += self.velocity;
+        self.isometry.translation.vector *= 1. - CONF.physics.friction_per_tick;
     }
 
     pub fn update_beam(&mut self, mouse_pos: Point2<f32>) {
         self.cached_mouse_pos = mouse_pos;
-        self.beam_rotation = (mouse_pos - self.pos).normalize();
+        self.beam_rotation = (mouse_pos - self.pos()).normalize();
     }
 
     pub fn set_beam_active(&mut self, active: bool) {
         self.beam_active = active;
+    }
+
+    /// Finds the closest collision point between the mouse coordinates and the player's entity.
+    fn get_beam_start_point(&self) -> Option<Point2<f32>> {
+        let inverse_beam_rotation = -1. * self.beam_rotation;
+        ray_collision(
+            self.cached_mouse_pos,
+            inverse_beam_rotation,
+            &self.vertices,
+            self.get_isometry(),
+        ).map(|(pt, _)| pt + 2.5 * inverse_beam_rotation)
+    }
+
+    #[inline(always)]
+    pub fn pos(&self) -> Point2<f32> {
+        Point2::new(
+            self.isometry.translation.vector.x,
+            self.isometry.translation.vector.y,
+        )
     }
 }
 
 impl Shape<f32> for PlayerEntity {
     fn aabb(&self, m: &Isometry2<f32>) -> AABB<f32> {
         AABB::new(
-            m * self.pos,
-            m * (self.pos + Vector2::new(self.size as f32, self.size as f32)),
+            m * self.pos(),
+            m * (self.pos() + Vector2::new(self.size as f32, self.size as f32)),
         )
     }
 }
@@ -124,14 +143,25 @@ impl Shape<f32> for PlayerEntity {
 impl Entity for PlayerEntity {
     fn render(&self, cur_tick: usize) {
         // Draw entity body
-        render_quad(&self.color, self.pos, self.size, self.size);
+        render_quad(
+            &self.color,
+            self.pos() - Vector2::new(0.5 * self.size as f32, 0.5 * self.size as f32),
+            self.size,
+            self.size,
+        );
 
-        let beam_len: f32 = 25.;
-        let beam_vec = self.beam_rotation * beam_len;
-        let beam_gun_endpoint = self.pos + beam_vec;
+        let beam_gun_len: f32 = 25.;
+        let beam_vec = self.beam_rotation * beam_gun_len;
+        let beam_gun_start_point = match self.get_beam_start_point() {
+            Some(pos) => pos,
+            None => {
+                return;
+            }
+        };
+        let beam_gun_endpoint = beam_gun_start_point + beam_vec;
 
         // Draw beam gun
-        render_line(&self.color, 8, self.pos, beam_gun_endpoint);
+        render_line(&self.color, 8, beam_gun_start_point, beam_gun_endpoint);
 
         // Draw beam if beam is active
         if !self.beam_active {
@@ -227,7 +257,7 @@ impl Entity for PlayerEntity {
             let effect = DemoCircle {
                 color: Color::random(),
                 width: 3,
-                pos: Point2::new(self.pos.x, self.pos.y + 50.),
+                pos: self.pos() + Vector2::new(0.0, 50.0),
                 cur_size: 0.,
                 max_size: 50.,
                 increment: 0.5,
@@ -254,13 +284,13 @@ impl Entity for PlayerEntity {
 
     fn get_bounding_volume(&self) -> AABB<f32> {
         AABB::new(
-            self.pos,
-            self.pos + Vector2::new(self.size as f32, self.size as f32),
+            self.pos(),
+            self.pos() + Vector2::new(self.size as f32, self.size as f32),
         )
     }
 
     fn get_isometry(&self) -> &Isometry2<f32> {
-        &*ISOMETRY_ZERO
+        &self.isometry
     }
 
     fn get_vertices(&self) -> &[Point2<f32>] {
