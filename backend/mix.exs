@@ -7,7 +7,8 @@ defmodule Backend.Mixfile do
       version: "0.0.1",
       elixir: "~> 1.4",
       elixirc_paths: elixirc_paths(Mix.env),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers,
+      compilers: [:phoenix, :gettext, :rustler] ++ Mix.compilers,
+      rustler_crates: rustler_crates(),
       start_permanent: Mix.env == :prod,
       deps: deps()
     ]
@@ -40,6 +41,13 @@ defmodule Backend.Mixfile do
       {:cowboy, "~> 1.0"},
       {:uuid, "~> 1.1"},
       {:exprotobuf, "~> 1.2.9"},
+      {:rustler, "~> 0.18.0"},
+    ]
+  end
+
+  defp rustler_crates do
+    [
+      native_physics: [ path: "../physics" ]
     ]
   end
 end
