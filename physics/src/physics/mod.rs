@@ -7,6 +7,7 @@ use std::sync::Mutex;
 
 use nalgebra::{Isometry2, Vector2};
 use ncollide2d::events::ContactEvent;
+use ncollide2d::query::Proximity;
 use nphysics2d::algebra::Force2;
 use nphysics2d::object::{Body, BodyHandle, ColliderHandle, Material, RigidBody, SensorHandle};
 use nphysics2d::solver::SignoriniModel;
@@ -27,6 +28,8 @@ use self::entities::{create_player_shape_handle, EntityType, BEAM_SHAPE_HANDLE};
 pub const COLLIDER_MARGIN: f32 = 0.01;
 pub const DEFAULT_PLAYER_SIZE: f32 = 20.0;
 pub const FRICTION_PER_TICK: f32 = 0.98;
+const HANDLE_MAP_EXPECT_MSG: &'static str =
+    "ERROR: No matching entry in `handle_map` for entry in `uuid_map`!";
 
 pub struct EntityHandles {
     collider_handle: ColliderHandle,
@@ -41,6 +44,8 @@ pub struct PhysicsWorldInner {
     handle_map: BTreeMap<ColliderHandle, (String, EntityType)>,
     world: World<f32>,
     user_handles: Vec<(BodyHandle, ColliderHandle)>,
+    /// Maps the collider handles of beam sensors to the User entities that own them
+    beam_sensors: BTreeMap<ColliderHandle, String>,
 }
 
 impl PhysicsWorldInner {
@@ -90,6 +95,7 @@ impl PhysicsWorldInner {
             handle_map: BTreeMap::new(),
             world,
             user_handles: Vec::new(),
+            beam_sensors: BTreeMap::new(),
         }
     }
 
@@ -123,7 +129,7 @@ impl PhysicsWorldInner {
                 let (_, entity) = self
                     .handle_map
                     .get_mut(collider_handle)
-                    .expect("ERROR: No matching entry in `handle_map` for entry in `uuid_map`!");
+                    .expect(HANDLE_MAP_EXPECT_MSG);
                 match *entity {
                     EntityType::Player {
                         ref mut beam_aim, ..
@@ -152,7 +158,7 @@ impl PhysicsWorldInner {
                 }
             }
             InternalUserDiffAction::BeamToggle(new_beam_on) => {
-                let (_, entity) = self
+                let (uuid, entity) = self
                     .handle_map
                     .get_mut(collider_handle)
                     .expect("ERROR: No matching entry in `handle_map` for entry in `uuid_map`!");
@@ -172,11 +178,13 @@ impl PhysicsWorldInner {
                                 return;
                             }
 
-                            *beam_handle = Some(self.world.add_sensor(
+                            let new_sensor_handle = self.world.add_sensor(
                                 BEAM_SHAPE_HANDLE.clone(),
                                 *body_handle,
                                 Isometry2::new(Vector2::zeros(), beam_aim),
-                            ));
+                            );
+                            *beam_handle = Some(new_sensor_handle);
+                            self.beam_sensors.insert(new_sensor_handle, uuid.clone());
                         } else {
                             let beam_handle = match beam_handle {
                                 Some(handle) => handle,
@@ -351,6 +359,45 @@ impl<'a> Update<'a> {
             payload: isometry.encode(env),
         }
     }
+
+    pub fn new_beam_event(
+        env: Env<'a>,
+        user_id: String,
+        target_entity_id: String,
+        prev_status: Proximity,
+        cur_status: Proximity,
+    ) -> Self {
+        Update {
+            id: user_id,
+            update_type: atoms::beam_event(),
+            payload: BeamEvent::new(target_entity_id, prev_status, cur_status).encode(env),
+        }
+    }
+}
+
+#[derive(NifStruct)]
+#[module = "NativePhysics.BeamEvent"]
+pub struct BeamEvent {
+    target_id: String,
+    prev_status: Atom,
+    cur_status: Atom,
+}
+
+fn proximity_to_atom(prox: Proximity) -> Atom {
+    match prox {
+        Proximity::Intersecting => atoms::intersecting(),
+        Proximity::WithinMargin | Proximity::Disjoint => atoms::disjoint(),
+    }
+}
+
+impl BeamEvent {
+    pub fn new(target_entity_id: String, prev_status: Proximity, cur_status: Proximity) -> Self {
+        BeamEvent {
+            target_id: target_entity_id,
+            prev_status: proximity_to_atom(prev_status),
+            cur_status: proximity_to_atom(cur_status),
+        }
+    }
 }
 
 #[derive(NifStruct)]
@@ -393,6 +440,7 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
             ref mut handle_map,
             ref mut world,
             ref mut user_handles,
+            ref mut beam_sensors,
             ..
         } = world;
 
@@ -433,7 +481,47 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
             Update::new_isometry_update(env, uuid.clone(), *collider.position())
         };
 
-        // TODO: Handle sensor detections
+        for prox_evt in world.proximity_events() {
+            // We don't care if the beam just got close to something
+            if prox_evt.prev_status != Proximity::WithinMargin
+                && prox_evt.new_status != Proximity::WithinMargin
+            {
+                continue;
+            }
+
+            if let Some((user_id, (target_entity_id, _target_entity))) = match (
+                beam_sensors.get(&prox_evt.collider1),
+                beam_sensors.get(&prox_evt.collider2),
+            ) {
+                (Some(_), Some(_)) => None, // Two beams colliding; ignore
+                (None, None) => {
+                    println!("WARN: proximity event between two non-sensors");
+                    None
+                }
+                (Some(user_id), None) => Some((
+                    user_id,
+                    handle_map
+                        .get(&prox_evt.collider2)
+                        .expect(HANDLE_MAP_EXPECT_MSG),
+                )),
+                (None, Some(user_id)) => Some((
+                    user_id,
+                    handle_map
+                        .get(&prox_evt.collider1)
+                        .expect(HANDLE_MAP_EXPECT_MSG),
+                )),
+            } {
+                // Create an update for the beam collision event and push it into the event list
+                let update = Update::new_beam_event(
+                    env,
+                    user_id.clone(),
+                    target_entity_id.clone(),
+                    prox_evt.prev_status,
+                    prox_evt.new_status,
+                );
+                updates.push(update);
+            }
+        }
 
         if update_all {
             // Create position updates for all managed entities
@@ -476,6 +564,7 @@ pub fn spawn_user(uuid: String) -> Position {
             ref mut handle_map,
             ref mut world,
             ref mut user_handles,
+            ref mut beam_sensors,
         } = world;
 
         // Add a rigid body and collision object into the world for the player
@@ -506,7 +595,7 @@ pub fn spawn_user(uuid: String) -> Position {
         handle_map.insert(
             collider_handle,
             (
-                uuid,
+                uuid.clone(),
                 EntityType::Player {
                     size: DEFAULT_PLAYER_SIZE,
                     movement: Movement::Stop,
@@ -515,6 +604,7 @@ pub fn spawn_user(uuid: String) -> Position {
                 },
             ),
         );
+        beam_sensors.insert(beam_handle, uuid);
         // Add the handle to the `user_handles` cache
         user_handles.push((body_handle, collider_handle));
     });

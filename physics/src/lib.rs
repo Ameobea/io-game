@@ -42,10 +42,15 @@ pub mod atoms {
 
         // Update Types
         atom isometry;
+        atom beam_event;
 
         // Entity Types
         atom player;
         atom asteroid;
+
+        // Proximity Events
+        atom intersecting;
+        atom disjoint;
     }
 }
 
