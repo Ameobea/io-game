@@ -1,0 +1,16 @@
+[package]
+authors = ["Casey Primozic <me@ameo.link>"]
+name = "physics"
+version = "0.1.0"
+
+[dependencies]
+lazy_static = "1.1.0"
+nphysics2d = "0.9.0"
+rustler = "0.18.0"
+rustler_codegen = "0.18.0"
+nalgebra = "0.16.0"
+ncollide2d = "0.17.0"
+
+[lib]
+crate_type = ["dylib"]
+name = "native_physics"
