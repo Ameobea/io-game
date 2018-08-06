@@ -8,7 +8,9 @@ use std::sync::Mutex;
 use nalgebra::{Isometry2, Vector2};
 use ncollide2d::events::ContactEvent;
 use nphysics2d::algebra::Force2;
-use nphysics2d::object::{Body, BodyHandle, BodyMut, ColliderHandle, Material, RigidBody};
+use nphysics2d::object::{
+    Body, BodyHandle, BodyMut, ColliderHandle, Material, RigidBody, SensorHandle,
+};
 use nphysics2d::solver::SignoriniModel;
 use nphysics2d::volumetric::Volumetric;
 use nphysics2d::world::World;
@@ -17,28 +19,45 @@ use rustler::types::atom::Atom;
 use rustler::{Encoder, Env, NifResult, Term};
 
 use super::atoms;
+use worldgen::{get_initial_entities, EntitySpawn};
 
 pub mod entities;
 
-use self::entities::{create_player_shape_handle, EntityType};
+use self::entities::{create_player_shape_handle, EntityType, BEAM_SHAPE_HANDLE};
 
 pub const COLLIDER_MARGIN: f32 = 0.01;
 pub const DEFAULT_PLAYER_SIZE: f32 = 20.0;
 pub const FRICTION_PER_TICK: f32 = 0.98;
 
+pub struct PlayerHandles {
+    collider_handle: ColliderHandle,
+    body_handle: BodyHandle,
+    beam_handle: SensorHandle,
+}
+
 pub struct PhysicsWorldInner {
     /// Maps UUIDs to internal physics entity handles
-    uuid_map: BTreeMap<String, (ColliderHandle, BodyHandle)>,
+    uuid_map: BTreeMap<String, PlayerHandles>,
     /// Maps `ColliderHandle`s to UUIDs
     handle_map: BTreeMap<ColliderHandle, (String, EntityType)>,
     world: World<f32>,
-    user_handles: Vec<BodyHandle>,
+    user_handles: Vec<(BodyHandle, ColliderHandle)>,
 }
 
 impl PhysicsWorldInner {
     pub fn new() -> Self {
         let mut world = World::new();
         world.set_contact_model(SignoriniModel::new());
+
+        // Populate the world with initial entities
+        for EntitySpawn {
+            isometry,
+            velocity,
+            entity,
+        } in get_initial_entities()
+        {
+            unimplemented!() // TODO
+        }
 
         PhysicsWorldInner {
             uuid_map: BTreeMap::new(),
@@ -88,6 +107,14 @@ impl<'a> TryInto<InternalUserDiff> for UserDiff<'a> {
                 let movement = Movement::from_term(self.payload)?;
                 InternalUserDiffAction::Movement(movement)
             }
+            t if atoms::beam_aim() == t => {
+                let aim_rads: f32 = self.payload.decode()?;
+                InternalUserDiffAction::BeamAim(aim_rads)
+            }
+            t if atoms::beam_toggle() == t => {
+                let beam_on: bool = self.payload.decode()?;
+                InternalUserDiffAction::BeamToggle(beam_on)
+            }
             _ => Err(NifError::Atom("invalid_action_type"))?,
         };
 
@@ -108,8 +135,11 @@ pub struct InternalUserDiff {
 /// and instead
 pub enum InternalUserDiffAction {
     Movement(Movement),
+    BeamAim(f32),
+    BeamToggle(bool),
 }
 
+#[derive(Clone, Copy)]
 pub enum Movement {
     Up,
     UpRight,
@@ -133,7 +163,24 @@ impl Movement {
             t if atoms::DOWN_LEFT() == t => Ok(Movement::DownLeft),
             t if atoms::LEFT() == t => Ok(Movement::Left),
             t if atoms::UP_LEFT() == t => Ok(Movement::UpLeft),
+            t if atoms::STOP() == t => Ok(Movement::Stop),
             _ => Err(NifError::Atom("invalid_movement_atom")),
+        }
+    }
+}
+
+impl Into<Atom> for Movement {
+    fn into(self) -> Atom {
+        match self {
+            Movement::Up => atoms::UP(),
+            Movement::UpRight => atoms::UP_RIGHT(),
+            Movement::Right => atoms::RIGHT(),
+            Movement::DownRight => atoms::DOWN_RIGHT(),
+            Movement::Down => atoms::DOWN(),
+            Movement::DownLeft => atoms::DOWN_LEFT(),
+            Movement::Left => atoms::LEFT(),
+            Movement::UpLeft => atoms::UP_LEFT(),
+            Movement::Stop => atoms::STOP(),
         }
     }
 }
@@ -219,24 +266,9 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
 
         let mut updates = Vec::new();
 
-        // Apply friction for all user entities
-        for user_body_handle in user_handles {
-            let mut user_entity_body = world.body_mut(*user_body_handle);
-            let user_rigid_body: &mut RigidBody<f32> = match user_entity_body {
-                BodyMut::RigidBody(rigid_body) => rigid_body,
-                _ => {
-                    println!("ERROR: Player wasn't a rigid body!");
-                    continue;
-                }
-            };
-
-            let linear_velocity = user_rigid_body.velocity().linear;
-            user_rigid_body.set_linear_velocity(linear_velocity * (1.0 - FRICTION_PER_TICK));
-        }
-
         // Process all incoming diffs from Elixir
         for InternalUserDiff { id, action } in diffs {
-            let (_collider_handle, body_handle) = match uuid_map.get(&id) {
+            let PlayerHandles { body_handle, .. } = match uuid_map.get(&id) {
                 Some(handle) => handle,
                 None => {
                     println!(
@@ -261,7 +293,35 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
                     let force: Force2<f32> = movement.into();
                     rigid_body.apply_force(&force);
                 }
+                _ => unimplemented!(), // TODO
             }
+        }
+
+        // Apply friction and movement updates for all user entities
+        for (user_body_handle, user_collider_handle) in user_handles {
+            let mut user_entity_body = world.body_mut(*user_body_handle);
+            let user_rigid_body: &mut RigidBody<f32> = match user_entity_body {
+                BodyMut::RigidBody(rigid_body) => rigid_body,
+                _ => {
+                    println!("ERROR: Player wasn't a rigid body!");
+                    continue;
+                }
+            };
+
+            // Apply thrust force from movement input
+            let (_uuid, user_data) = handle_map
+                .get(user_collider_handle)
+                .expect("User collider handle isn't in the `handle_map`!");
+            let movement: Movement = match user_data {
+                EntityType::Player { movement, .. } => (*movement),
+                _ => panic!("Expected a player entity but the entity data wasn't one!"),
+            };
+            let force: Force2<f32> = movement.into();
+            user_rigid_body.apply_force(&force);
+
+            // Apply friction
+            let linear_velocity = user_rigid_body.velocity().linear;
+            user_rigid_body.set_linear_velocity(linear_velocity * (1.0 - FRICTION_PER_TICK));
         }
 
         // Step the physics simulation
@@ -276,6 +336,8 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
                 .expect("`ColliderHandle` wasn't in the `handle_map`!");
             Update::new_isometry_update(env, uuid.clone(), *collider.position())
         };
+
+        // TODO: Handle sensor detections
 
         if update_all {
             // Create position updates for all managed entities
@@ -330,8 +392,20 @@ pub fn spawn_user(uuid: String) -> Position {
             Material::default(),
         );
 
+        // Create a `Sensor` for the player's beam
+        let beam_handle = world.add_sensor(
+            BEAM_SHAPE_HANDLE.clone(),
+            body_handle,
+            Isometry2::identity(),
+        );
+
         // Insert an entry into the UUID map for the created player's internal handles
-        uuid_map.insert(uuid.clone(), (collider_handle, body_handle));
+        let handles = PlayerHandles {
+            collider_handle,
+            body_handle,
+            beam_handle,
+        };
+        uuid_map.insert(uuid.clone(), handles);
         // Also insert an entry into the reverse lookup map
         handle_map.insert(
             collider_handle,
@@ -339,11 +413,12 @@ pub fn spawn_user(uuid: String) -> Position {
                 uuid,
                 EntityType::Player {
                     size: DEFAULT_PLAYER_SIZE,
+                    movement: Movement::Stop,
                 },
             ),
         );
         // Add the handle to the `user_handles` cache
-        user_handles.push(body_handle);
+        user_handles.push((body_handle, collider_handle));
     });
 
     Position { x: 0.0, y: 0.0 }

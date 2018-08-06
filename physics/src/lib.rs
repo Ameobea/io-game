@@ -36,6 +36,8 @@ pub mod atoms {
 
         // Action Types
         atom movement;
+        atom beam_aim;
+        atom beam_toggle;
 
         // Update Types
         atom isometry;

@@ -5,7 +5,21 @@ use ncollide2d::shape::{Cuboid, ShapeHandle};
 use rustler::{types::atom::Atom, Encoder, Env, NifResult, Term};
 
 use super::super::atoms;
-use super::COLLIDER_MARGIN;
+use super::{Movement, COLLIDER_MARGIN};
+
+// TODO: Move these out into config files
+const BEAM_LENGTH: f32 = 50.0;
+const BEAM_WIDTH: f32 = 2.0;
+
+lazy_static! {
+    pub static ref BEAM_SHAPE_HANDLE: ShapeHandle<f32> = {
+        let shape = Cuboid::new(Vector2::new(
+            BEAM_LENGTH / 2. - COLLIDER_MARGIN,
+            BEAM_WIDTH / 2. - COLLIDER_MARGIN,
+        ));
+        ShapeHandle::new(shape)
+    };
+}
 
 pub fn create_player_shape_handle(size: f32) -> ShapeHandle<f32> {
     let shape = Cuboid::new(Vector2::new(
@@ -16,16 +30,18 @@ pub fn create_player_shape_handle(size: f32) -> ShapeHandle<f32> {
 }
 
 pub enum EntityType {
-    Player { size: f32 },
+    Player { size: f32, movement: Movement },
     Asteroid { vertices: Vec<Point2<f32>> },
 }
 
 impl EntityType {
     pub fn to_data<'a>(&self, env: Env<'a>) -> NifResult<(Atom, Term<'a>)> {
         match self {
-            EntityType::Player { size } => {
+            EntityType::Player { size, movement } => {
                 let map = Term::map_new(env);
                 let map = map.map_put("size".encode(env), size.encode(env))?;
+                let movement_atom: Atom = (*movement).into();
+                let map = map.map_put("movement".encode(env), movement_atom.encode(env))?;
 
                 Ok((atoms::player(), map))
             }

@@ -12,7 +12,7 @@ message AsteroidEntity {
   float velocity_x = 1;
   float velocity_y = 2;
   float rotation = 3;
-  float delta_rotation = 4;
+  float angular_momentum = 4;
   repeated float vert_coords = 5; // List of vertices as [x1, y1, x2, y2, ...]
 }
 
@@ -48,8 +48,10 @@ message Snapshot {
 message MovementUpdate {
   float pos_x = 1;
   float pos_y = 2;
-  float velocity_x = 3; // pixels/tick (60 ticks/second)
-  float velocity_y = 4; // pixels/tick (60 ticks/second)
+  float rotation = 3;
+  float velocity_x = 4; // pixels/tick (60 ticks/second)
+  float velocity_y = 5; // pixels/tick (60 ticks/second)
+  float angular_momentum = 6;
 }
 
 message ServerError {
