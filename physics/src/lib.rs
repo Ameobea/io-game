@@ -35,21 +35,36 @@ pub mod atoms {
         atom STOP;
 
         // Action Types
-        atom Movement;
+        atom movement;
 
         // Update Types
-        atom Isometry;
+        atom isometry;
+
+        // Entity Types
+        atom player;
+        atom asteroid;
     }
 }
 
 rustler_export_nifs!(
-    "Elixir.NativePhysics",
-    [("spawn_user", 1, spawn_user), ("tick", 1, tick)],
+    "NativePhysics",
+    [
+        ("spawn_user", 1, spawn_user),
+        ("tick", 1, tick),
+        ("get_snapshot", 0, get_snapshot)
+    ],
     None
 );
 
+fn get_snapshot<'a>(env: Env<'a>, _args: &[Term<'a>]) -> NifResult<Term<'a>> {
+    let snapshot = physics::get_snapshot(env)?;
+    Ok(snapshot.encode(env))
+}
+
 fn tick<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let diffs_iterator: ListIterator = args[0].decode()?;
+    let update_all: bool = args[1].decode()?;
+
     let diffs: Vec<InternalUserDiff> = diffs_iterator
         .map(|diff| diff.decode())
         .map(
@@ -61,9 +76,9 @@ fn tick<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
             },
         ).collect::<NifResult<Vec<InternalUserDiff>>>()?;
 
-    physics::tick(env, diffs);
+    let actions = physics::tick(env, update_all, diffs);
 
-    Ok(().encode(env))
+    Ok(actions.encode(env))
 }
 
 fn spawn_user<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {

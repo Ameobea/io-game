@@ -6,8 +6,10 @@ use std::convert::TryInto;
 use std::sync::Mutex;
 
 use nalgebra::{Isometry2, Vector2};
+use ncollide2d::events::ContactEvent;
 use nphysics2d::algebra::Force2;
-use nphysics2d::object::{BodyHandle, BodyMut, ColliderHandle, Material, RigidBody};
+use nphysics2d::object::{Body, BodyHandle, BodyMut, ColliderHandle, Material, RigidBody};
+use nphysics2d::solver::SignoriniModel;
 use nphysics2d::volumetric::Volumetric;
 use nphysics2d::world::World;
 use rustler::error::Error as NifError;
@@ -18,23 +20,30 @@ use super::atoms;
 
 pub mod entities;
 
-use self::entities::create_player_shape_handle;
+use self::entities::{create_player_shape_handle, EntityType};
 
 pub const COLLIDER_MARGIN: f32 = 0.01;
 pub const DEFAULT_PLAYER_SIZE: f32 = 20.0;
 pub const FRICTION_PER_TICK: f32 = 0.98;
 
 pub struct PhysicsWorldInner {
+    /// Maps UUIDs to internal physics entity handles
     uuid_map: BTreeMap<String, (ColliderHandle, BodyHandle)>,
+    /// Maps `ColliderHandle`s to UUIDs
+    handle_map: BTreeMap<ColliderHandle, (String, EntityType)>,
     world: World<f32>,
     user_handles: Vec<BodyHandle>,
 }
 
 impl PhysicsWorldInner {
     pub fn new() -> Self {
+        let mut world = World::new();
+        world.set_contact_model(SignoriniModel::new());
+
         PhysicsWorldInner {
             uuid_map: BTreeMap::new(),
-            world: World::new(),
+            handle_map: BTreeMap::new(),
+            world,
             user_handles: Vec::new(),
         }
     }
@@ -47,7 +56,7 @@ impl PhysicsWorld {
         PhysicsWorld(Mutex::new(PhysicsWorldInner::new()))
     }
 
-    pub fn apply<F: FnOnce(&mut PhysicsWorldInner) -> ()>(&self, f: F) {
+    pub fn apply<T, F: FnOnce(&mut PhysicsWorldInner) -> T>(&self, f: F) -> T {
         let mut inner = self.0.lock().unwrap();
         f(&mut inner)
     }
@@ -63,7 +72,7 @@ lazy_static! {
 pub fn init() {}
 
 #[derive(NifStruct)]
-#[module = "Elixir.NativePhysics.UserDiff"]
+#[module = "NativePhysics.UserDiff"]
 pub struct UserDiff<'a> {
     id: String,
     action_type: Atom,
@@ -75,7 +84,7 @@ impl<'a> TryInto<InternalUserDiff> for UserDiff<'a> {
 
     fn try_into(self) -> NifResult<InternalUserDiff> {
         let internal_action = match self.action_type {
-            t if atoms::Movement() == t => {
+            t if atoms::movement() == t => {
                 let movement = Movement::from_term(self.payload)?;
                 InternalUserDiffAction::Movement(movement)
             }
@@ -151,7 +160,7 @@ impl Into<Force2<f32>> for Movement {
 /// An update that is returned from the physics world as the result of a tick.  These should
 /// generally map to updates of the outer state held by Elixir or updates sent directly to users.
 #[derive(NifStruct)]
-#[module = "Elixir.NativePhysics.Update"]
+#[module = "NativePhysics.Update"]
 pub struct Update<'a> {
     id: String,
     update_type: Atom,
@@ -164,21 +173,21 @@ impl<'a> Update<'a> {
 
         Update {
             id,
-            update_type: atoms::Isometry(),
+            update_type: atoms::isometry(),
             payload: isometry.encode(env),
         }
     }
 }
 
 #[derive(NifStruct)]
-#[module = "Elixir.NativePhysics.Position"]
+#[module = "NativePhysics.Position"]
 pub struct Position {
     pub x: f32,
     pub y: f32,
 }
 
 #[derive(NifStruct)]
-#[module = "Elixir.NativePhysics.Isometry"]
+#[module = "NativePhysics.Isometry"]
 pub struct Isometry {
     pub position: Position,
     pub rotation: f32,
@@ -199,13 +208,16 @@ impl Into<Isometry> for Isometry2<f32> {
 /// This is called by the Elixir code every tick of the game.  It will be provided an array of
 /// updates to the game state which will be applied to the internal state that the physics
 /// engine manages and return a set of messages that need to be sent to the user.
-pub fn tick<'a>(env: Env<'a>, diffs: Vec<InternalUserDiff>) {
+pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) -> Vec<Update> {
     WORLD.apply(move |world| {
         let &mut PhysicsWorldInner {
             ref mut uuid_map,
+            ref mut handle_map,
             ref mut world,
             ref mut user_handles,
         } = world;
+
+        let mut updates = Vec::new();
 
         // Apply friction for all user entities
         for user_body_handle in user_handles {
@@ -251,6 +263,41 @@ pub fn tick<'a>(env: Env<'a>, diffs: Vec<InternalUserDiff>) {
                 }
             }
         }
+
+        // Step the physics simulation
+        world.step();
+
+        // Looks up the collider with the given handle, creates an `Update` with its position,
+        // and pushes it into the update list.
+        let create_pos_update = |handle: ColliderHandle| -> Update {
+            let collider = world.collider(handle).unwrap();
+            let (uuid, _entity_type) = handle_map
+                .get(&handle)
+                .expect("`ColliderHandle` wasn't in the `handle_map`!");
+            Update::new_isometry_update(env, uuid.clone(), *collider.position())
+        };
+
+        if update_all {
+            // Create position updates for all managed entities
+            for (collider_handle, (uuid, _entity_type)) in handle_map.iter() {
+                let collider = world.collider(*collider_handle).unwrap();
+                let update = Update::new_isometry_update(env, uuid.clone(), *collider.position());
+                updates.push(update);
+            }
+        } else {
+            // Create position events for all entities that have just been involved in a collision
+            for contact_evt in world.contact_events() {
+                match contact_evt {
+                    ContactEvent::Started(handle_1, handle_2)
+                    | ContactEvent::Stopped(handle_1, handle_2) => {
+                        updates.push(create_pos_update(*handle_1));
+                        updates.push(create_pos_update(*handle_2));
+                    }
+                }
+            }
+        }
+
+        updates
     })
 }
 
@@ -268,6 +315,7 @@ pub fn spawn_user(uuid: String) -> Position {
     WORLD.apply(move |world| {
         let &mut PhysicsWorldInner {
             ref mut uuid_map,
+            ref mut handle_map,
             ref mut world,
             ref mut user_handles,
         } = world;
@@ -283,10 +331,79 @@ pub fn spawn_user(uuid: String) -> Position {
         );
 
         // Insert an entry into the UUID map for the created player's internal handles
-        uuid_map.insert(uuid, (collider_handle, body_handle));
+        uuid_map.insert(uuid.clone(), (collider_handle, body_handle));
+        // Also insert an entry into the reverse lookup map
+        handle_map.insert(
+            collider_handle,
+            (
+                uuid,
+                EntityType::Player {
+                    size: DEFAULT_PLAYER_SIZE,
+                },
+            ),
+        );
         // Add the handle to the `user_handles` cache
         user_handles.push(body_handle);
     });
 
     Position { x: 0.0, y: 0.0 }
+}
+
+#[derive(NifStruct)]
+#[module = "NativePhysics.LinearVelocity"]
+pub struct LinearVelocity {
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(NifStruct)]
+#[module = "NativePhysics.EntityData"]
+pub struct EntityData<'a> {
+    pub id: String,
+    pub position: Isometry,
+    pub velocity: LinearVelocity,
+    pub rotation: f32,
+    pub entity_type: Atom,
+    pub entity_meta: Term<'a>,
+}
+
+pub fn get_snapshot<'a>(env: Env<'a>) -> NifResult<Vec<EntityData<'a>>> {
+    WORLD.apply(|world| {
+        world
+            .handle_map
+            .iter()
+            .map(
+                |(handle, (uuid, entity_type))| -> NifResult<EntityData<'a>> {
+                    let collider = world
+                        .world
+                        .collider(*handle)
+                        .expect("No collider with a handle stored in `handle_map` found!");
+                    let isometry: &Isometry2<f32> = collider.position();
+                    let isometry: Isometry = (*isometry).into();
+                    let (entity_name, data) = entity_type.to_data(env)?;
+
+                    let body_handle: BodyHandle = collider.data().body();
+                    let body = world.world.body(body_handle);
+                    let velocity = match body {
+                        Body::RigidBody(rigid_body) => rigid_body.velocity(),
+                        Body::Multibody(_) => unimplemented!(),
+                        Body::Ground(_) => unimplemented!(),
+                    };
+
+                    let data = EntityData {
+                        id: uuid.clone(),
+                        position: isometry,
+                        velocity: LinearVelocity {
+                            x: (*velocity).linear.x,
+                            y: (*velocity).linear.y,
+                        },
+                        rotation: velocity.angular,
+                        entity_type: entity_name,
+                        entity_meta: data,
+                    };
+
+                    Ok(data)
+                },
+            ).collect::<NifResult<Vec<EntityData<'a>>>>()
+    })
 }
