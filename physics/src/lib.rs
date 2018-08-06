@@ -47,10 +47,10 @@ pub mod atoms {
 }
 
 rustler_export_nifs!(
-    "NativePhysics",
+    "Elixir.NativePhysics",
     [
         ("spawn_user", 1, spawn_user),
-        ("tick", 1, tick),
+        ("tick", 2, tick),
         ("get_snapshot", 0, get_snapshot)
     ],
     None

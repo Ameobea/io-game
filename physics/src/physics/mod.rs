@@ -361,8 +361,9 @@ pub struct LinearVelocity {
 pub struct EntityData<'a> {
     pub id: String,
     pub position: Isometry,
-    pub velocity: LinearVelocity,
-    pub rotation: f32,
+    pub linear_velocity: LinearVelocity,
+    /// radians/?
+    pub angular_velocity: f32,
     pub entity_type: Atom,
     pub entity_meta: Term<'a>,
 }
@@ -393,11 +394,11 @@ pub fn get_snapshot<'a>(env: Env<'a>) -> NifResult<Vec<EntityData<'a>>> {
                     let data = EntityData {
                         id: uuid.clone(),
                         position: isometry,
-                        velocity: LinearVelocity {
+                        linear_velocity: LinearVelocity {
                             x: (*velocity).linear.x,
                             y: (*velocity).linear.y,
                         },
-                        rotation: velocity.angular,
+                        angular_velocity: velocity.angular,
                         entity_type: entity_name,
                         entity_meta: data,
                     };
