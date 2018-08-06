@@ -1,7 +1,7 @@
 //! Contains definitions for the various types of entities that are spawnable into the world.
 
 use nalgebra::{Point2, Vector2};
-use ncollide2d::shape::{Cuboid, ShapeHandle};
+use ncollide2d::shape::{ConvexPolygon, Cuboid, ShapeHandle};
 use rustler::{types::atom::Atom, Encoder, Env, NifResult, Term};
 
 use super::super::atoms;
@@ -30,18 +30,44 @@ pub fn create_player_shape_handle(size: f32) -> ShapeHandle<f32> {
 }
 
 pub enum EntityType {
-    Player { size: f32, movement: Movement },
-    Asteroid { vertices: Vec<Point2<f32>> },
+    Player {
+        size: f32,
+        movement: Movement,
+        beam_aim: f32,
+        beam_on: bool,
+    },
+    Asteroid {
+        vertices: Vec<Point2<f32>>,
+    },
+}
+
+fn make_map<'a>(env: Env<'a>, items: &[(&'static str, &Encoder)]) -> NifResult<Term<'a>> {
+    let mut map = Term::map_new(env);
+    for (key, val) in items {
+        map = map.map_put(key.encode(env), val.encode(env))?;
+    }
+    Ok(map)
 }
 
 impl EntityType {
     pub fn to_data<'a>(&self, env: Env<'a>) -> NifResult<(Atom, Term<'a>)> {
         match self {
-            EntityType::Player { size, movement } => {
-                let map = Term::map_new(env);
-                let map = map.map_put("size".encode(env), size.encode(env))?;
+            EntityType::Player {
+                size,
+                movement,
+                beam_aim,
+                beam_on,
+            } => {
                 let movement_atom: Atom = (*movement).into();
-                let map = map.map_put("movement".encode(env), movement_atom.encode(env))?;
+                let map = make_map(
+                    env,
+                    &[
+                        ("size", &*size),
+                        ("movement", &movement_atom),
+                        ("beam_aim", beam_aim),
+                        ("beam_on", beam_on),
+                    ],
+                )?;
 
                 Ok((atoms::player(), map))
             }
@@ -56,6 +82,24 @@ impl EntityType {
 
                 Ok((atoms::asteroid(), map))
             }
+        }
+    }
+
+    pub fn get_shape_handle(&self) -> ShapeHandle<f32> {
+        match self {
+            EntityType::Player { size, .. } => create_player_shape_handle(*size),
+            EntityType::Asteroid { vertices, .. } => {
+                let shape = ConvexPolygon::try_new(vertices.clone())
+                    .expect("Unable to compute `ConvexPolygon` from asteroid vertices!");
+                ShapeHandle::new(shape)
+            }
+        }
+    }
+
+    pub fn get_density(&self) -> f32 {
+        match self {
+            EntityType::Player { .. } => 1.0,
+            EntityType::Asteroid { .. } => 3.5,
         }
     }
 }

@@ -10,6 +10,7 @@ extern crate nphysics2d;
 extern crate rustler_codegen;
 extern crate nalgebra;
 extern crate ncollide2d;
+extern crate uuid;
 
 use std::convert::TryInto;
 
