@@ -3,10 +3,10 @@ authors = ["Casey Primozic <me@ameo.link>"]
 build = "build.rs"
 name = "game-engine"
 version = "0.1.0"
+
 [build-dependencies]
-handlebars = "1.0.0"
 protobuf-codegen-pure = "2.0.3"
-serde_json = "1.0.24"
+config_loader = {path = "../../config_loader"}
 
 [dependencies]
 lazy_static = "1.0.2"

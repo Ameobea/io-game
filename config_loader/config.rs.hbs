@@ -1,12 +1,14 @@
 pub struct Conf {
     pub physics: PhysicsConf,
     pub network: NetworkConf,
+    pub game: GameConf,
 }
 
 pub struct PhysicsConf {
     pub acceleration_per_tick: f32,
     pub max_player_speed: f32,
     pub friction_per_tick: f32,
+    pub collider_margin: f32,
 }
 
 pub struct NetworkConf {
@@ -17,11 +19,22 @@ pub struct NetworkConf {
     pub custom_event_name: &'static str,
 }
 
+pub struct GameConf {
+    pub world_min_x: f32,
+    pub world_max_x: f32,
+    pub world_min_y: f32,
+    pub world_max_y: f32,
+    pub default_player_size: f32,
+    pub player_beam_length: f32,
+    pub player_beam_width: f32,
+}
+
 pub const CONF: Conf = Conf {
     physics: PhysicsConf {
         acceleration_per_tick: {{ f32 physics-accelerationPerTick }},
         max_player_speed: {{ f32 physics-maxPlayerSpeed }},
         friction_per_tick: {{ f32 physics-frictionPerTick }},
+        collider_margin: {{ f32 physics-colliderMargin }},
     },
     network: NetworkConf {
         websocket_url: "{{ network-websocketUrl }}",
@@ -29,5 +42,14 @@ pub const CONF: Conf = Conf {
         game_channel_name: "{{ network-gameChannelName }}",
         phoenix_tag: "{{ network-phoenixTag }}",
         custom_event_name: "{{ network-customEventName }}",
-    }
+    },
+    game: GameConf {
+        world_min_x: {{ f32 game-worldMinX }},
+        world_max_x: {{ f32 game-worldMaxX }},
+        world_min_y: {{ f32 game-worldMinY }},
+        world_max_y: {{ f32 game-worldMaxY }},
+        default_player_size: {{ f32 game-defaultPlayerSize }},
+        player_beam_length: {{ f32 game-playerBeamLength }},
+        player_beam_width: {{ f32 game-playerBeamWidth }},
+    },
 };

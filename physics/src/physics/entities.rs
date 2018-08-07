@@ -6,16 +6,13 @@ use rustler::{types::atom::Atom, Encoder, Env, NifResult, Term};
 
 use super::super::atoms;
 use super::{Movement, COLLIDER_MARGIN};
-
-// TODO: Move these out into config files
-const BEAM_LENGTH: f32 = 50.0;
-const BEAM_WIDTH: f32 = 2.0;
+use conf::CONF;
 
 lazy_static! {
     pub static ref BEAM_SHAPE_HANDLE: ShapeHandle<f32> = {
         let shape = Cuboid::new(Vector2::new(
-            BEAM_LENGTH / 2. - COLLIDER_MARGIN,
-            BEAM_WIDTH / 2. - COLLIDER_MARGIN,
+            CONF.game.player_beam_length / 2. - COLLIDER_MARGIN,
+            CONF.game.player_beam_width / 2. - COLLIDER_MARGIN,
         ));
         ShapeHandle::new(shape)
     };
@@ -62,7 +59,7 @@ impl EntityType {
                 let map = make_map(
                     env,
                     &[
-                        ("size", &*size),
+                        ("size", size),
                         ("movement", &movement_atom),
                         ("beam_aim", beam_aim),
                         ("beam_on", beam_on),

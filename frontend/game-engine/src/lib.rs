@@ -8,15 +8,13 @@
     nll,
 )]
 
+extern crate libcomposition;
 extern crate nalgebra;
 extern crate ncollide2d;
+extern crate noise;
 extern crate protobuf;
 extern crate uuid;
 extern crate wasm_bindgen;
-#[macro_use]
-extern crate lazy_static;
-extern crate libcomposition;
-extern crate noise;
 
 use std::panic;
 
@@ -138,14 +136,14 @@ pub fn spawn_asteroid(
     rotation_rads: f32,
     velocity_x: f32,
     velocity_y: f32,
-    delta_rotation_rads: f32,
+    angular_momentum: f32,
 ) {
     let mut entity = AsteroidEntity::new();
     entity.set_vert_coords(point_coords);
     entity.set_rotation(rotation_rads);
     entity.set_velocity_x(velocity_x);
     entity.set_velocity_y(velocity_y);
-    entity.set_delta_rotation(delta_rotation_rads);
+    entity.set_angular_momentum(angular_momentum);
 
     get_state().create_entity(
         &EntityType::asteroid(entity),

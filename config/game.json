@@ -1,0 +1,9 @@
+{
+  "worldMinX": -1000,
+  "worldMaxX": 1000,
+  "worldMinY": -1000,
+  "worldMaxY": 1000,
+  "defaultPlayerSize": 20.0,
+  "playerBeamLength": 100.0,
+  "playerBeamWidth": 0.5
+}

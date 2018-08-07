@@ -19,15 +19,15 @@ use rustler::{Encoder, Env, NifResult, Term};
 use uuid::Uuid;
 
 use super::atoms;
+use conf::CONF;
 use worldgen::{get_initial_entities, EntitySpawn};
 
 pub mod entities;
 
 use self::entities::{create_player_shape_handle, EntityType, BEAM_SHAPE_HANDLE};
 
-pub const COLLIDER_MARGIN: f32 = 0.01;
-pub const DEFAULT_PLAYER_SIZE: f32 = 20.0;
-pub const FRICTION_PER_TICK: f32 = 0.98;
+pub const COLLIDER_MARGIN: f32 = CONF.physics.collider_margin;
+pub const DEFAULT_PLAYER_SIZE: f32 = CONF.game.default_player_size;
 const HANDLE_MAP_EXPECT_MSG: &'static str =
     "ERROR: No matching entry in `handle_map` for entry in `uuid_map`!";
 
@@ -335,7 +335,7 @@ impl Into<Force2<f32>> for Movement {
         };
         let direction_vector: Vector2<f32> = Vector2::new(dir_x, dir_y).normalize();
 
-        Force2::linear(direction_vector)
+        Force2::linear(direction_vector * CONF.physics.acceleration_per_tick)
     }
 }
 
@@ -465,7 +465,8 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
 
             // Apply friction
             let linear_velocity = user_rigid_body.velocity().linear;
-            user_rigid_body.set_linear_velocity(linear_velocity * (1.0 - FRICTION_PER_TICK));
+            user_rigid_body
+                .set_linear_velocity(linear_velocity * (1.0 - CONF.physics.friction_per_tick));
         }
 
         // Step the physics simulation

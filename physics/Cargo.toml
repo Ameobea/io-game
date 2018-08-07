@@ -3,6 +3,9 @@ authors = ["Casey Primozic <me@ameo.link>"]
 name = "physics"
 version = "0.1.0"
 
+[build-dependencies]
+config_loader = {path = "../config_loader"}
+
 [dependencies]
 lazy_static = "1.1.0"
 nalgebra = "0.16.0"
@@ -11,6 +14,7 @@ nphysics2d = "0.9.0"
 rustler = "0.18.0"
 rustler_codegen = "0.18.0"
 uuid = { version = "0.6.5", features = ["v4"] }
+rand = "0.5.3"
 
 [lib]
 crate_type = ["dylib"]

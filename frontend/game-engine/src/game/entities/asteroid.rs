@@ -49,7 +49,7 @@ impl Asteroid {
             Isometry2::new(translation, asteroid.get_rotation()),
             Isometry2::new(
                 Vector2::new(asteroid.get_velocity_x(), asteroid.get_velocity_y()),
-                asteroid.get_delta_rotation(),
+                asteroid.get_angular_momentum(),
             ),
         )
     }

@@ -10,13 +10,16 @@ extern crate nphysics2d;
 extern crate rustler_codegen;
 extern crate nalgebra;
 extern crate ncollide2d;
+extern crate rand;
 extern crate uuid;
 
 use std::convert::TryInto;
 
+use rustler::schedule::SchedulerFlags;
 use rustler::types::ListIterator;
 use rustler::{Encoder, Env, NifResult, Term};
 
+pub mod conf;
 pub mod physics;
 pub mod worldgen;
 
@@ -58,7 +61,7 @@ rustler_export_nifs!(
     "Elixir.NativePhysics",
     [
         ("spawn_user", 1, spawn_user),
-        ("tick", 2, tick),
+        ("tick", 2, tick, SchedulerFlags::DirtyCpu),
         ("get_snapshot", 0, get_snapshot)
     ],
     None
