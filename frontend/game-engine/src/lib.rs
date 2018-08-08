@@ -18,7 +18,6 @@ extern crate wasm_bindgen;
 
 use std::panic;
 
-use nalgebra::Vector2;
 use wasm_bindgen::prelude::*;
 
 pub mod conf;
@@ -39,7 +38,9 @@ use game_state::{
 };
 use phoenix_proto::{join_game_channel, send_connect_message};
 use proto_utils::parse_server_message;
-use protos::server_messages::{AsteroidEntity, CreationEvent_oneof_entity as EntityType};
+use protos::server_messages::{
+    AsteroidEntity, CreationEvent, CreationEvent_oneof_entity as EntityType, MovementUpdate,
+};
 use render_effects::RenderEffectManager;
 use util::{error, v4_uuid};
 
@@ -138,14 +139,15 @@ pub fn spawn_asteroid(
 ) {
     let mut entity = AsteroidEntity::new();
     entity.set_vert_coords(point_coords);
-    entity.set_rotation(rotation_rads);
-    entity.set_velocity_x(velocity_x);
-    entity.set_velocity_y(velocity_y);
-    entity.set_angular_momentum(angular_momentum);
+    let mut movement = MovementUpdate::new();
+    movement.set_pos_x(offset_x);
+    movement.set_pos_y(offset_y);
+    movement.set_rotation(rotation_rads);
+    movement.set_velocity_x(velocity_x);
+    movement.set_velocity_y(velocity_y);
+    movement.set_angular_velocity(angular_momentum);
+    let mut creation_evt = CreationEvent::new();
+    creation_evt.entity = Some(EntityType::asteroid(entity));
 
-    get_state().create_entity(
-        &EntityType::asteroid(entity),
-        v4_uuid(),
-        Vector2::new(offset_x, offset_y),
-    );
+    get_state().create_entity(v4_uuid(), &creation_evt);
 }

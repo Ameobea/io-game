@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::mem;
 use std::ptr;
 
-use nalgebra::{Point2, Vector2};
+use nalgebra::Point2;
 use ncollide2d::bounding_volume::{aabb::AABB, BoundingVolume};
 use ncollide2d::partitioning::{BVTVisitor, DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
@@ -14,12 +14,12 @@ use game::entities::asteroid::Asteroid;
 use game::PlayerEntity;
 use proto_utils::{parse_server_msg_payload, InnerServerMessage, ServerMessageContent};
 use protos::server_messages::{
-    CreationEvent, CreationEvent_oneof_entity as EntityType, ServerMessage, StatusUpdate,
+    CreationEvent, CreationEvent_oneof_entity as EntityType, ServerMessage, Snapshot, StatusUpdate,
     StatusUpdate_SimpleEvent as SimpleEvent, StatusUpdate_oneof_payload as StatusPayload,
 };
 use render_effects::RenderEffectManager;
 use user_input::CurHeldKeys;
-use util::{error, warn};
+use util::{error, log, warn};
 
 pub static mut STATE: *mut GameState = ptr::null_mut();
 pub static mut EFFECTS_MANAGER: *mut RenderEffectManager = ptr::null_mut();
@@ -105,21 +105,14 @@ impl GameState {
         entity_id: Uuid,
         update: ServerMessageContent,
         tick: u32,
-        timestamp: f32,
+        timestamp: u64,
     ) {
         // TODO: handle tick and timestamp; check for skipepd messages and request re-sync etc.
         match update {
             ServerMessageContent::status_update(StatusUpdate { payload, .. }) => match payload {
-                Some(StatusPayload::creation_event(CreationEvent {
-                    pos_x,
-                    pos_y,
-                    entity,
-                    ..
-                })) => if let Some(entity) = entity {
-                    self.create_entity(&entity, entity_id, Vector2::new(pos_x, pos_y))
-                } else {
-                    warn("Received entity creation update with no inner entity payload")
-                },
+                Some(StatusPayload::creation_event(creation_evt)) => {
+                    self.create_entity(entity_id, &creation_evt)
+                }
                 Some(StatusPayload::other(SimpleEvent::DELETION)) => {
                     // Remove the entity from the UUID map as well as the DBVT
                     let (leaf_id, _) = match self.uuid_map.remove(&entity_id) {
@@ -137,6 +130,7 @@ impl GameState {
                 }
                 None => warn("Received `StatusUpdate` with no payload"),
             },
+            ServerMessageContent::snapshot(snapshot) => self.apply_snapshot(snapshot),
             _ => {
                 let (leaf_id, entity) = match self.uuid_map.get_mut(&entity_id) {
                     Some(key) => key,
@@ -160,6 +154,24 @@ impl GameState {
         }
     }
 
+    /// Removes all items from the UUID map and the DBVT, then reconstruct the game state from the
+    /// contents of the snapshot
+    fn apply_snapshot(&mut self, snapshot: Snapshot) {
+        log("Clearing game state and applying snapshot...");
+        // Too bad we have to do it like this.  TODO: Add a `clear()` method to `DBVT` via PR
+        for (_uuid, (leaf_id, _entity)) in self.uuid_map.iter() {
+            self.entity_map.remove(*leaf_id);
+        }
+        self.uuid_map.clear();
+
+        for mut snapshot_item in snapshot.items.into_iter() {
+            log("Applying snapshot item...");
+            let uuid: Uuid = snapshot_item.take_id().into();
+            let creation_evt = snapshot_item.get_item();
+            self.create_entity(uuid, creation_evt);
+        }
+    }
+
     /// Renders all entities in random order.  Some entities take a default action every game tick
     /// without taking input from the server.  This method iterates over all entities and
     /// optionally performs this mutation before rendering.  Returns the current tick.
@@ -180,22 +192,27 @@ impl GameState {
         self.cur_tick
     }
 
-    pub fn create_entity(
-        &mut self,
-        entity: &EntityType,
-        entity_id: Uuid,
-        translation: Vector2<f32>,
-    ) {
+    pub fn create_entity(&mut self, entity_id: Uuid, creation_evt: &CreationEvent) {
+        let entity = match creation_evt.entity.as_ref() {
+            Some(entity) => entity,
+            None => {
+                error("Received `CreationEvent` without an `enity` field");
+                return;
+            }
+        };
+        let movement = creation_evt.get_movement();
+
         let boxed_entity: Box<dyn Entity> = match entity {
             EntityType::player(player) => box PlayerEntity::new(
-                Point2::new(translation.x, translation.y),
+                Point2::new(movement.get_pos_x(), movement.get_pos_y()),
                 player.get_size() as u16,
             ),
-            EntityType::asteroid(asteroid) => box Asteroid::from_proto(asteroid, translation),
+            EntityType::asteroid(asteroid) => box Asteroid::from_proto(asteroid, movement),
         };
 
         let leaf = DBVTLeaf::new(boxed_entity.get_bounding_volume(), entity_id);
         let leaf_id = self.entity_map.insert(leaf);
+        log(format!("Spawning entity {}", entity_id));
         self.uuid_map.insert(entity_id, (leaf_id, boxed_entity));
     }
 

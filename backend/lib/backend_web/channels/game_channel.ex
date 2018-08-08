@@ -18,47 +18,54 @@ defmodule BackendWeb.GameChannel do
     send(self(), :after_join)
     uuid = UUID.uuid4()
 
-    movement_update = NativePhysics.spawn_user(uuid)
-    internal_movement_update = movement_update
-      |> Map.from_struct
-      |> Backend.ProtoMessage.MovementUpdate.new
+    # Send a snapshot of the current game state to the user
+    snapshot = GameState.get_topic(socket.topic) |> ProtoMessage.encode_game_state_to_snapshot
+    snapshot_payload = ServerMessage.Payload.new(%{
+      id: ProtoMessage.Uuid.new(%{
+        data_1: 0,
+        data_2: 0,
+      }),
+      payload: {:snapshot, snapshot},
+    })
 
     {
       :ok,
-      ServerMessage.new(%{
-        tick: 0, # TODO
-        timestamp: 0, # TODO
-        payload: [
-          ServerMessage.Payload.new(%{
-            id: ProtoMessage.to_proto_uuid(uuid),
-            payload: {
-              :status_update,
-              StatusUpdate.new(%{
-                payload: {
-                  :creation_event,
-                  CreationEvent.new(%{
-                    movement: internal_movement_update,
-                    entity: {
-                      :player,
-                      PlayerEntity.new(%{
-                        size: 20, # TODO: read from config
-                      }),
-                    },
-                  }),
-                },
-              }),
-            },
-          }),
-        ],
-      }),
+      [snapshot_payload],
       assign(socket, :player_id, uuid)
     }
   end
 
   def handle_info(:after_join, socket) do
     :ok = GameState.track_player(socket.topic, socket.assigns.player_id, %{})
-    proto_game_state = GameState.get_topic(socket.topic) |> ProtoMessage.encode_game_state_to_snapshot
-    push socket, "current_game_state", proto_game_state
+
+    # Spawn the user into the Physics Engine world and generate a `MovementUpdate` for them
+    movement_update = NativePhysics.spawn_user(socket.assigns.player_id)
+    internal_movement_update = movement_update
+      |> Map.from_struct
+      |> Backend.ProtoMessage.MovementUpdate.new
+
+    # Broadcast a creation event
+    creation_msg_payload = ServerMessage.Payload.new(%{
+      id: ProtoMessage.to_proto_uuid(socket.assigns.player_id),
+      payload: {
+        :status_update,
+        StatusUpdate.new(%{
+          payload: {
+            :creation_event,
+            CreationEvent.new(%{
+              movement: internal_movement_update,
+              entity: {
+                :player,
+                PlayerEntity.new(%{
+                  size: 20, # TODO: read from config
+                }),
+              },
+            }),
+          },
+        }),
+      },
+    })
+    broadcast! socket, "game", %{response: [creation_msg_payload]}
     {:noreply, socket}
   end
 

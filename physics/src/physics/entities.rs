@@ -38,7 +38,7 @@ pub enum EntityType {
     },
 }
 
-fn make_map<'a>(env: Env<'a>, items: &[(&'static str, &Encoder)]) -> NifResult<Term<'a>> {
+fn make_map<'a>(env: Env<'a>, items: &[(Atom, &Encoder)]) -> NifResult<Term<'a>> {
     let mut map = Term::map_new(env);
     for (key, val) in items {
         map = map.map_put(key.encode(env), val.encode(env))?;
@@ -59,10 +59,10 @@ impl EntityType {
                 let map = make_map(
                     env,
                     &[
-                        ("size", size),
-                        ("movement", &movement_atom),
-                        ("beam_aim", beam_aim),
-                        ("beam_on", beam_on),
+                        (atoms::size(), size),
+                        (atoms::movement(), &movement_atom),
+                        (atoms::beam_aim(), beam_aim),
+                        (atoms::beam_on(), beam_on),
                     ],
                 )?;
 
@@ -75,7 +75,8 @@ impl EntityType {
                     mapped_verts.push(vert.x);
                     mapped_verts.push(vert.y);
                 }
-                let map = map.map_put("vertices".encode(env), mapped_verts.encode(env))?;
+                let map =
+                    map.map_put(atoms::vert_coords().encode(env), mapped_verts.encode(env))?;
 
                 Ok((atoms::asteroid(), map))
             }

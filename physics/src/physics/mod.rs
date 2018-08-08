@@ -241,7 +241,7 @@ lazy_static! {
 impl<'a> UserDiff<'a> {
     pub fn parse(self, env: Env<'a>) -> NifResult<InternalUserDiff> {
         let internal_action = match self.action_type {
-            t if atoms::movement() == t => {
+            t if atoms::direction() == t => {
                 let movement = Movement::from_term(self.payload)?;
                 InternalUserDiffAction::Movement(movement)
             }
@@ -566,7 +566,8 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
 /// spawned in.
 pub fn spawn_user(uuid: String) -> MovementUpdate {
     let player_shape_handle = create_player_shape_handle(DEFAULT_PLAYER_SIZE);
-    let pos = Isometry2::new(Vector2::new(0.0, 0.0), 0.0);
+    // TODO: decide where to spawn the user some better way
+    let pos = Isometry2::new(Vector2::new(200.0, 200.0), 0.0);
 
     // `ShapeHandle` implements `AsRef<Shape>`, and `Shape` implements `Volumetric` which has the
     // `inertia()` and `center_of_mass()` functions.  Yeah.

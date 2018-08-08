@@ -6,9 +6,9 @@ use ncollide2d::shape::{Polyline, Shape};
 
 use entity::Entity;
 use proto_utils::ServerMessageContent;
-use protos::server_messages::AsteroidEntity as ProtoAsteroidEntity;
+use protos::server_messages::{AsteroidEntity as ProtoAsteroidEntity, MovementUpdate};
 use render_methods::fill_poly;
-use util::Color;
+use util::{log, Color};
 
 pub struct Asteroid {
     pub isometry: Isometry2<f32>,
@@ -17,6 +17,19 @@ pub struct Asteroid {
     pub delta_isometry: Isometry2<f32>,
     poly_line: Polyline<f32>,
     transformed_coords_buffer: Vec<f32>,
+}
+
+fn process_movement(movement: &MovementUpdate) -> (Isometry2<f32>, Isometry2<f32>) {
+    let pos = Isometry2::new(
+        Vector2::new(movement.get_pos_x(), movement.get_pos_y()),
+        movement.get_rotation(),
+    );
+    let velocity = Isometry2::new(
+        Vector2::new(movement.get_velocity_x(), movement.get_velocity_y()),
+        movement.get_angular_velocity(),
+    );
+
+    (pos, velocity)
 }
 
 impl Asteroid {
@@ -38,18 +51,28 @@ impl Asteroid {
         }
     }
 
-    pub fn from_proto(asteroid: &ProtoAsteroidEntity, translation: Vector2<f32>) -> Self {
+    fn set_movement(&mut self, movement: &MovementUpdate) {
+        let (pos, velocity) = process_movement(movement);
+        self.isometry = pos;
+        self.delta_isometry = velocity;
+    }
+
+    pub fn from_proto(asteroid: &ProtoAsteroidEntity, movement: &MovementUpdate) -> Self {
+        let (pos, velocity) = process_movement(movement);
+        log(format!(
+            "Creating asteroid with verts: {:?}, movement: {:?}, {:?}",
+            asteroid.get_vert_coords(),
+            pos,
+            velocity
+        ));
         Asteroid::new(
             asteroid
                 .get_vert_coords()
                 .chunks(2)
                 .map(|pt| Point2::new(pt[0], pt[1]))
                 .collect(),
-            Isometry2::new(translation, asteroid.get_rotation()),
-            Isometry2::new(
-                Vector2::new(asteroid.get_velocity_x(), asteroid.get_velocity_y()),
-                asteroid.get_angular_momentum(),
-            ),
+            pos,
+            velocity,
         )
     }
 }
@@ -82,8 +105,14 @@ impl Entity for Asteroid {
         self.delta_isometry != Isometry2::new(Vector2::new(0., 0.), 0.)
     }
 
-    fn apply_update(&mut self, _update: &ServerMessageContent) -> bool {
-        false
+    fn apply_update(&mut self, update: &ServerMessageContent) -> bool {
+        match &update {
+            &ServerMessageContent::movement_update(movement) => {
+                self.set_movement(&movement);
+                true
+            }
+            _ => false,
+        }
     }
 
     fn get_bounding_volume(&self) -> AABB<f32> {

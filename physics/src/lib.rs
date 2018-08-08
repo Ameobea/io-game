@@ -37,7 +37,7 @@ pub mod atoms {
         atom STOP;
 
         // Action Types
-        atom movement;
+        atom direction;
         atom beam_rotation;
         atom beam_toggle;
 
@@ -57,6 +57,11 @@ pub mod atoms {
         // Map/Struct Keys
         atom x;
         atom y;
+        atom size;
+        atom movement;
+        atom beam_aim;
+        atom beam_on;
+        atom vert_coords;
     }
 }
 

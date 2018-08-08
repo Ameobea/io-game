@@ -2,6 +2,8 @@ use std::f32::INFINITY;
 
 use nalgebra::{distance, Isometry2, Point2, Vector2};
 
+use util::warn;
+
 fn cross(v: Vector2<f32>, w: Vector2<f32>) -> f32 {
     (v.x * w.y) - (v.y * w.x)
 }
@@ -13,7 +15,15 @@ pub fn ray_collision(
     isometry: &Isometry2<f32>,
 ) -> Option<(Point2<f32>, f32)> {
     // Start with the last point since the passed in points are non-closed
-    let mut last_transformed_pt = isometry * vertices.last().unwrap();
+    let last_vertex = match vertices.last() {
+        Some(vtx) => vtx,
+        None => {
+            warn("Tried to test collision against a polygon with 0 vertices");
+            return None;
+        }
+    };
+    let mut last_transformed_pt = isometry * last_vertex;
+
     let (nearest_collision, smallest_distance) = vertices
         .into_iter()
         .map(|point| {

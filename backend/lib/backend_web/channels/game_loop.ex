@@ -5,7 +5,7 @@ defmodule BackendWeb.GameLoop do
   alias Backend.ProtoMessage
   alias Backend.ProtoMessage.{ServerMessage, MovementUpdate}
 
-  @timedelay 500
+  @timedelay 16
   @nanoseconds_to_seconds 1_000_000_000
 
   def init(_) do
@@ -61,7 +61,7 @@ defmodule BackendWeb.GameLoop do
       payload = updates
         |> Enum.map(&handle_update/1)
         |> Enum.filter(& !is_nil(&1))
-      BackendWeb.Endpoint.broadcast! topic, "tick", %{payload: payload}
+      BackendWeb.Endpoint.broadcast! topic, "tick", %{response: payload}
     else
       IO.inspect(["PHYSICS ENGINE ERROR", player_inputs, updates])
     end
@@ -79,7 +79,7 @@ defmodule BackendWeb.GameLoop do
       |> Backend.ProtoMessage.MovementUpdate.new
 
     ServerMessage.Payload.new(%{
-      id: id,
+      id: ProtoMessage.to_proto_uuid(id),
       payload: {
         :movement_update,
         internal_movement_update,
@@ -89,6 +89,7 @@ defmodule BackendWeb.GameLoop do
 
   defp handle_update(unmatched) do
     IO.inspect(["~~~~!!!! UNMATCHED UPDATE", unmatched])
+    nil
   end
 
   defp start_tick() do

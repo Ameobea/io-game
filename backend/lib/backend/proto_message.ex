@@ -12,6 +12,7 @@ defmodule Backend.ProtoMessage do
     CreationEvent,
     PlayerEntity,
     AsteroidEntity,
+    ServerMessage.Payload,
   }
   alias NativePhysics
   alias NativePhysics.MovementUpdate
@@ -43,15 +44,16 @@ defmodule Backend.ProtoMessage do
   end
 
   def encode_socket_message(%Phoenix.Socket.Message{} = message) do
-    IO.inspect(["~~~PAYLOAD", message.payload])
-    ServerChannelMessage.encode(ServerChannelMessage.new(%{
+    msg = ServerChannelMessage.new(%{
       topic: message.topic,
       event: encode_event(message.event),
       ref: message.ref,
       payload: encode_payload(message.payload),
-    }))
+    })
+    ServerChannelMessage.encode(msg)
   end
 
+  # Converts a UUID into two unsigned 64-bit integers representing its raw byte data
   def to_proto_uuid(uuid) do
     [part2, part1] = uuid
       |> UUID.string_to_binary!
@@ -67,6 +69,7 @@ defmodule Backend.ProtoMessage do
     UUID.uuid4() |> to_proto_uuid
   end
 
+  # Merge the physics state from the backend with the state held in Elixir
   def encode_game_state_to_snapshot(%{} = game_state) do
     items = game_state
       |> Map.merge(NativePhysics.get_snapshot(), fn _, a, b -> Map.merge(a, Map.from_struct(b)) end)
@@ -83,6 +86,7 @@ defmodule Backend.ProtoMessage do
     })
   end
 
+  # TODO: optimize this iteration
   defp to_snapshot_item({player_id, data = %{}}) do
     %{
       id: entity_id,
@@ -91,15 +95,20 @@ defmodule Backend.ProtoMessage do
       entity_meta: entity_meta,
     } = data
     Snapshot.SnapshotItem.new(%{
-      id: entity_id,
+      id: to_proto_uuid(entity_id),
       item: CreationEvent.new(%{
-        movement: movement,
+        movement: movement |> Map.from_struct |> Backend.ProtoMessage.MovementUpdate.new,
         entity: encode_entity(entity_type, entity_meta),
       }),
     })
   end
 
-  defp encode_entity(entity_type, entity_meta), do: @entity_types[entity_type].new(entity_meta)
+  defp encode_entity(entity_type, entity_meta) do
+    # Convert map keys from strings to atoms
+    # mapped_entity_meta = entity_meta |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
+    IO.inspect(["ENCODING ENTITY", entity_type, entity_meta])
+    {entity_type, @entity_types[entity_type].new(entity_meta)}
+  end
 
   defp encode_event("phx_" <> event) do
     phx_event = PhoenixEvent.value(event |> String.capitalize |> String.to_atom)
@@ -110,11 +119,15 @@ defmodule Backend.ProtoMessage do
     Event.new(%{payload: {:custom_event, other_event} })
   end
 
-  defp encode_payload(%{response: payload}), do: payload
-  defp encode_payload(%{}), do: nil
+  defp encode_payload(%{response: payload}), do: encode_payload(payload)
+  defp encode_payload(%{__struct__: ServerMessage.Payload} = payload), do: payload
   defp encode_payload(payloads) when is_list(payloads) do
-    Enum.map(payloads, &encode_payload/1)
+    ServerMessage.new(%{
+      tick: 0, # TODO
+      timestamp: 0, # TODO
+      payload: Enum.map(payloads, &encode_payload/1),
+    })
   end
-  defp encode_payload(%{response: payload}), do: payload
-  # defp encode_payload(payload), do: payload
+  defp encode_payload(%{}), do: nil
+  defp encode_payload(payload), do: payload
 end

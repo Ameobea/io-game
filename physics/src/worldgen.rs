@@ -21,13 +21,16 @@ fn pt2(x: f32, y: f32) -> Point2<f32> {
 }
 
 fn get_asteroid_vertices() -> Vec<Point2<f32>> {
-    vec![
+    [
         pt2(-1., 1.),
         pt2(-1., -1.),
         pt2(1., -1.),
         pt2(2., 0.),
         pt2(1., 1.),
     ]
+        .into_iter()
+        .map(|pt| pt * 20.)
+        .collect()
 }
 
 fn create_asteroid() -> EntitySpawn {
@@ -36,8 +39,10 @@ fn create_asteroid() -> EntitySpawn {
     EntitySpawn {
         isometry: Isometry2::new(
             Vector2::new(
-                rng.gen_range(CONF.game.world_min_x, CONF.game.world_max_x),
-                rng.gen_range(CONF.game.world_min_y, CONF.game.world_max_y),
+                // rng.gen_range(CONF.game.world_min_x, CONF.game.world_max_x),
+                // rng.gen_range(CONF.game.world_min_y, CONF.game.world_max_y),
+                rng.gen_range(200., 500.),
+                rng.gen_range(200., 500.),
             ).normalize(),
             rng.gen_range(0., 2.0 * PI),
         ),

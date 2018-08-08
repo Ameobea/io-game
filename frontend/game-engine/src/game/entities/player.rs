@@ -1,4 +1,4 @@
-use nalgebra::{Isometry2, Point2, Translation2, Vector2};
+use nalgebra::{Isometry2, Point2, Translation2, UnitComplex, Vector2};
 use ncollide2d::bounding_volume::aabb::AABB;
 use ncollide2d::shape::Shape;
 
@@ -34,6 +34,7 @@ pub struct PlayerEntity {
     pub direction_input: Direction,
     /// Velocity vector along the x/y axises in pixels/tick
     pub velocity: Vector2<f32>,
+    pub angular_momentum: f32,
     pub size: u16,
     vertices: Vec<Point2<f32>>,
     /// A normalized vector that represents the direction that the beam is pointing
@@ -51,6 +52,7 @@ impl PlayerEntity {
             isometry: Isometry2::new(Vector2::new(pos.x, pos.y), 0.0),
             direction_input: Direction::STOP,
             velocity: Vector2::zeros(),
+            angular_momentum: 0.0,
             size,
             vertices: player_vertices(size),
             beam_rotation: Vector2::new(1., 0.),
@@ -64,8 +66,10 @@ impl PlayerEntity {
         &MovementUpdate {
             pos_x,
             pos_y,
+            rotation,
             velocity_x,
             velocity_y,
+            angular_velocity,
             ..
         }: &MovementUpdate,
     ) {
@@ -73,8 +77,12 @@ impl PlayerEntity {
             "{}, {}, {}, {}",
             pos_x, pos_y, velocity_x, velocity_y
         ));
-        self.isometry.translation = Translation2::from_vector(Vector2::new(pos_x, pos_y));
+        self.isometry = Isometry2::from_parts(
+            Translation2::from_vector(Vector2::new(pos_x, pos_y)),
+            UnitComplex::from_angle(rotation),
+        );
         self.velocity = Vector2::new(velocity_x, velocity_y);
+        self.angular_momentum = angular_velocity;
     }
 
     fn tick_movement(&mut self) {
@@ -140,6 +148,7 @@ impl Shape<f32> for PlayerEntity {
 }
 
 impl Entity for PlayerEntity {
+    // TODO: Account for isometry
     fn render(&self, cur_tick: usize) {
         // Draw entity body
         render_quad(
@@ -248,6 +257,7 @@ impl Entity for PlayerEntity {
         render_line(&line_color, 1, beam_start, beam_endpoint);
     }
 
+    // TODO: Account for angular momentum
     fn tick(&mut self, tick: usize) -> bool {
         self.tick_movement();
         self.update_beam(self.cached_mouse_pos);
