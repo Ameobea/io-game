@@ -1,4 +1,4 @@
-#![feature(plugin, try_from)]
+#![feature(plugin)]
 // #![plugin(rustler_codegen)]
 
 #[macro_use]
@@ -13,17 +13,15 @@ extern crate ncollide2d;
 extern crate rand;
 extern crate uuid;
 
-use std::convert::TryInto;
-
 use rustler::schedule::SchedulerFlags;
-use rustler::types::ListIterator;
+use rustler::types::{atom::Atom, ListIterator};
 use rustler::{Encoder, Env, NifResult, Term};
 
 pub mod conf;
 pub mod physics;
 pub mod worldgen;
 
-use self::physics::{InternalUserDiff, UserDiff};
+use self::physics::InternalUserDiff;
 
 pub mod atoms {
     rustler_atoms! {
@@ -40,12 +38,13 @@ pub mod atoms {
 
         // Action Types
         atom movement;
-        atom beam_aim;
+        atom beam_rotation;
         atom beam_toggle;
 
         // Update Types
         atom isometry;
         atom beam_event;
+        atom username;
 
         // Entity Types
         atom player;
@@ -54,6 +53,10 @@ pub mod atoms {
         // Proximity Events
         atom intersecting;
         atom disjoint;
+
+        // Map/Struct Keys
+        atom x;
+        atom y;
     }
 }
 
@@ -62,14 +65,17 @@ rustler_export_nifs!(
     [
         ("spawn_user", 1, spawn_user),
         ("tick", 2, tick, SchedulerFlags::DirtyCpu),
-        ("get_snapshot", 0, get_snapshot)
+        ("get_snapshot", 0, physics::get_snapshot)
     ],
     None
 );
 
-fn get_snapshot<'a>(env: Env<'a>, _args: &[Term<'a>]) -> NifResult<Term<'a>> {
-    let snapshot = physics::get_snapshot(env)?;
-    Ok(snapshot.encode(env))
+#[derive(NifStruct)]
+#[module = "NativePhysics.UserDiff"]
+pub struct UserDiff<'a> {
+    id: String,
+    action_type: Atom,
+    payload: Term<'a>,
 }
 
 fn tick<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
@@ -77,11 +83,11 @@ fn tick<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let update_all: bool = args[1].decode()?;
 
     let diffs: Vec<InternalUserDiff> = diffs_iterator
-        .map(|diff| diff.decode())
+        .map(|diff| -> NifResult<UserDiff<'a>> { diff.decode() })
         .map(
             |diff_res: NifResult<UserDiff>| -> NifResult<InternalUserDiff> {
                 match diff_res {
-                    Ok(diff) => diff.try_into(),
+                    Ok(diff) => diff.parse(env),
                     Err(err) => Err(err),
                 }
             },

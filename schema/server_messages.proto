@@ -4,24 +4,17 @@ import "message_common.proto";
 
 message PlayerEntity {
   fixed32 size = 1;
-  float velocity_x = 2; // pixels/tick (60 ticks/second)
-  float velocity_y = 3; // pixels/tick (60 ticks/second)
 }
 
 message AsteroidEntity {
-  float velocity_x = 1;
-  float velocity_y = 2;
-  float rotation = 3;
-  float angular_momentum = 4;
   repeated float vert_coords = 5; // List of vertices as [x1, y1, x2, y2, ...]
 }
 
 message CreationEvent {
-  float pos_x = 1;
-  float pos_y = 2;
+  MovementUpdate movement = 1;
   oneof entity {
-    PlayerEntity player = 3;
-    AsteroidEntity asteroid = 4;
+    PlayerEntity player = 2;
+    AsteroidEntity asteroid = 3;
   }
 }
 
@@ -51,7 +44,7 @@ message MovementUpdate {
   float rotation = 3;
   float velocity_x = 4; // pixels/tick (60 ticks/second)
   float velocity_y = 5; // pixels/tick (60 ticks/second)
-  float angular_momentum = 6;
+  float angular_velocity = 6;
 }
 
 message ServerError {
@@ -70,6 +63,7 @@ message ServerMessage {
   }
 
   fixed32 tick = 1;
-  float timestamp = 2;
+  // nanotime
+  fixed64 timestamp = 2;
   repeated Payload payload = 3;
 }

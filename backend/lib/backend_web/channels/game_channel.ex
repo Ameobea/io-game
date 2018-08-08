@@ -8,31 +8,55 @@ defmodule BackendWeb.GameChannel do
     ClientMessage,
     ConnectMessage,
     BeamAim,
+    StatusUpdate,
+    CreationEvent,
+    PlayerEntity,
   }
+  alias NativePhysics
 
   def join("rooms:game", _payload, socket) do
     send(self(), :after_join)
     uuid = UUID.uuid4()
+
+    movement_update = NativePhysics.spawn_user(uuid)
+    internal_movement_update = movement_update
+      |> Map.from_struct
+      |> Backend.ProtoMessage.MovementUpdate.new
+
     {
       :ok,
-      ServerMessage.new(%{id: ProtoMessage.to_proto_uuid(uuid)}),
+      ServerMessage.new(%{
+        tick: 0, # TODO
+        timestamp: 0, # TODO
+        payload: [
+          ServerMessage.Payload.new(%{
+            id: ProtoMessage.to_proto_uuid(uuid),
+            payload: {
+              :status_update,
+              StatusUpdate.new(%{
+                payload: {
+                  :creation_event,
+                  CreationEvent.new(%{
+                    movement: internal_movement_update,
+                    entity: {
+                      :player,
+                      PlayerEntity.new(%{
+                        size: 20, # TODO: read from config
+                      }),
+                    },
+                  }),
+                },
+              }),
+            },
+          }),
+        ],
+      }),
       assign(socket, :player_id, uuid)
     }
   end
 
   def handle_info(:after_join, socket) do
-    :ok = GameState.track_player(socket.topic, socket.assigns.player_id, %{
-      pos_x: 0,
-      pos_y: 0,
-      size: 100,
-      velocity_x: 0,
-      velocity_y: 0,
-      input: %{
-        player_move: :STOP,
-        beam_rotation: BeamAim.new(%{x: 0, y: 0}),
-        beam_toggle: false,
-      },
-    })
+    :ok = GameState.track_player(socket.topic, socket.assigns.player_id, %{})
     proto_game_state = GameState.get_topic(socket.topic) |> ProtoMessage.encode_game_state_to_snapshot
     push socket, "current_game_state", proto_game_state
     {:noreply, socket}
