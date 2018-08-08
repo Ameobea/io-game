@@ -62,6 +62,14 @@ defmodule Backend.ProtoMessage do
     Snapshot.new(%{items: items})
   end
 
+  def create_server_message([] = payloads) do
+    ServerMessage.new(%{
+      tick: 0, # TODO: Replace with current tick from game state
+      timestamp: 0.0, # TODO: Replace with timestamp of current tick
+      payload: encode_payload(payloads),
+    })
+  end
+
   defp to_snapshot_item({player_id, data = %{}}) do
     %{
       pos_x: pos_x,
@@ -95,5 +103,8 @@ defmodule Backend.ProtoMessage do
 
   defp encode_payload(%{response: payload}), do: payload
   defp encode_payload(%{}), do: nil
+  defp encode_payload([] = payloads) do
+    Enum.map(payloads, fn payload -> encode_payload(payload) end)
+  end
   defp encode_payload(payload), do: payload
 end

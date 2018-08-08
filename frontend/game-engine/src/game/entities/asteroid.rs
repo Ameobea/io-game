@@ -5,9 +5,8 @@ use ncollide2d::query::RayCast;
 use ncollide2d::shape::{Polyline, Shape};
 
 use entity::Entity;
-use protos::server_messages::{
-    AsteroidEntity as ProtoAsteroidEntity, ServerMessage_oneof_payload as ServerMessageContent,
-};
+use proto_utils::ServerMessageContent;
+use protos::server_messages::AsteroidEntity as ProtoAsteroidEntity;
 use render_methods::fill_poly;
 use util::Color;
 

@@ -8,8 +8,8 @@ use phoenix_proto::send_channel_message;
 use protos::channel_messages::Event;
 use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::Uuid as ProtoUuid;
-use protos::server_messages::ServerMessage;
-pub use protos::server_messages::ServerMessage_oneof_payload as ServerMessageContent;
+pub use protos::server_messages::ServerMessage_Payload_oneof_payload as ServerMessageContent;
+use protos::server_messages::{ServerMessage, ServerMessage_Payload as ServerMessagePayload};
 use util::{error, warn};
 
 pub struct InnerServerMessage {
@@ -17,8 +17,8 @@ pub struct InnerServerMessage {
     pub content: ServerMessageContent,
 }
 
-impl Into<Option<InnerServerMessage>> for ServerMessage {
-    fn into(mut self: ServerMessage) -> Option<InnerServerMessage> {
+impl Into<Option<InnerServerMessage>> for ServerMessagePayload {
+    fn into(mut self: ServerMessagePayload) -> Option<InnerServerMessage> {
         if cfg!(debug_assertions) {
             if let Some(ref fields) = self.get_unknown_fields().fields {
                 let field_names = fields.iter().collect::<Vec<_>>();
@@ -64,7 +64,17 @@ impl Into<ProtoUuid> for Uuid {
     }
 }
 
-pub fn parse_server_message(bytes: &[u8]) -> Option<InnerServerMessage> {
+pub fn parse_server_msg_payload(msg: ServerMessage) -> Vec<InnerServerMessage> {
+    let mut inner_messages = Vec::with_capacity(msg.payload.len());
+    for msg in msg.payload.into_iter() {
+        if let Some(inner_msg) = msg.into() {
+            inner_messages.push(inner_msg);
+        }
+    }
+    inner_messages
+}
+
+pub fn parse_server_message(bytes: &[u8]) -> Option<ServerMessage> {
     let msg: ServerMessage = match parse_from_bytes(bytes) {
         Ok(msg) => msg,
         Err(err) => {
@@ -76,7 +86,7 @@ pub fn parse_server_message(bytes: &[u8]) -> Option<InnerServerMessage> {
         }
     };
 
-    msg.into()
+    Some(msg)
 }
 
 pub fn msg_to_bytes<M: Message>(msg: M) -> Vec<u8> {

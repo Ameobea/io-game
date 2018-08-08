@@ -12,9 +12,9 @@ use uuid::Uuid;
 use entity::Entity;
 use game::entities::asteroid::Asteroid;
 use game::PlayerEntity;
-use proto_utils::ServerMessageContent;
+use proto_utils::{parse_server_msg_payload, InnerServerMessage, ServerMessageContent};
 use protos::server_messages::{
-    CreationEvent, CreationEvent_oneof_entity as EntityType, StatusUpdate,
+    CreationEvent, CreationEvent_oneof_entity as EntityType, ServerMessage, StatusUpdate,
     StatusUpdate_SimpleEvent as SimpleEvent, StatusUpdate_oneof_payload as StatusPayload,
 };
 use render_effects::RenderEffectManager;
@@ -91,7 +91,23 @@ impl GameState {
         }
     }
 
-    pub fn apply_msg(&mut self, entity_id: Uuid, update: ServerMessageContent) {
+    pub fn apply_msg(&mut self, msg: ServerMessage) {
+        let tick = msg.get_tick();
+        let timestamp = msg.get_timestamp();
+
+        for InnerServerMessage { id, content } in parse_server_msg_payload(msg) {
+            self.apply_inner_msg(id, content, tick, timestamp)
+        }
+    }
+
+    fn apply_inner_msg(
+        &mut self,
+        entity_id: Uuid,
+        update: ServerMessageContent,
+        tick: u32,
+        timestamp: f32,
+    ) {
+        // TODO: handle tick and timestamp; check for skipepd messages and request re-sync etc.
         match update {
             ServerMessageContent::status_update(StatusUpdate { payload, .. }) => match payload {
                 Some(StatusPayload::creation_event(CreationEvent {

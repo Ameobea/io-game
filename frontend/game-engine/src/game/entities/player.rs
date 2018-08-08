@@ -7,10 +7,9 @@ use entity::Entity;
 use game::effects::DrillingParticles;
 use game_state::{get_effects_manager, get_state};
 use physics::ray_collision;
+use proto_utils::ServerMessageContent;
 use protos::message_common::MovementDirection as Direction;
-use protos::server_messages::{
-    MovementUpdate, ServerMessage_oneof_payload as ServerMessageContent,
-};
+use protos::server_messages::MovementUpdate;
 use render_methods::{render_line, render_quad};
 use util::{error, log, Color};
 

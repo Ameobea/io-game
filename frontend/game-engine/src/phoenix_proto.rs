@@ -1,7 +1,6 @@
 use super::send_message;
 use conf::CONF;
 use game_state::get_state;
-use proto_utils::InnerServerMessage;
 use protos::channel_messages::{
     ClientChannelMessage, Event, Event_oneof_payload as EventPayload, PhoenixEvent,
     ServerChannelMessage,
@@ -104,9 +103,7 @@ pub fn handle_server_msg(bytes: &[u8]) {
                             }
                         };
 
-                        if let Some(InnerServerMessage { id, content }) = server_msg.into() {
-                            get_state().apply_msg(id, content);
-                        }
+                        get_state().apply_msg(server_msg);
                     }
                 },
                 Some(EventPayload::phoenix_event(evt)) => match evt {

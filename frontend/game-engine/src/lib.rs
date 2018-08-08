@@ -38,7 +38,7 @@ use game_state::{
     get_effects_manager, get_state, player_entity_fastpath, GameState, EFFECTS_MANAGER, STATE,
 };
 use phoenix_proto::{join_game_channel, send_connect_message};
-use proto_utils::{parse_server_message, InnerServerMessage};
+use proto_utils::parse_server_message;
 use protos::server_messages::{AsteroidEntity, CreationEvent_oneof_entity as EntityType};
 use render_effects::RenderEffectManager;
 use util::{error, v4_uuid};
@@ -107,10 +107,8 @@ pub fn init(canvas_width: f32, canvas_height: f32) {
 
 #[wasm_bindgen]
 pub fn handle_message(bytes: &[u8]) {
-    if let Some(InnerServerMessage { id, content }) = parse_server_message(bytes) {
-        get_state().apply_msg(id, content)
-    } else {
-        error("Error while parsing server message!");
+    if let Some(msg) = parse_server_message(bytes) {
+        get_state().apply_msg(msg)
     }
 }
 

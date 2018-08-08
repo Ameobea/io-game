@@ -59,11 +59,17 @@ message ServerError {
 }
 
 message ServerMessage {
-  Uuid id = 1;
-  oneof payload {
-    MovementUpdate movement_update = 2;
-    StatusUpdate status_update = 3;
-    Snapshot snapshot = 4;
-    ServerError error = 5;
+  message Payload {
+    Uuid id = 1;
+    oneof payload {
+      MovementUpdate movement_update = 2;
+      StatusUpdate status_update = 3;
+      Snapshot snapshot = 4;
+      ServerError error = 5;
+    }
   }
+
+  fixed32 tick = 1;
+  float timestamp = 2;
+  repeated Payload payload = 3;
 }
