@@ -50,6 +50,7 @@ defmodule Backend.ProtoMessage do
       ref: message.ref,
       payload: encode_payload(message.payload),
     })
+    # IO.inspect(["~~!~!~!~!~!~!", msg])
     ServerChannelMessage.encode(msg)
   end
 
@@ -90,6 +91,8 @@ defmodule Backend.ProtoMessage do
   defp to_snapshot_item({player_id, data = %{}}) do
     %{
       id: entity_id,
+      center_of_mass_x: center_of_mass_x,
+      center_of_mass_y: center_of_mass_y,
       movement: movement,
       entity_type: entity_type,
       entity_meta: entity_meta,
@@ -97,16 +100,20 @@ defmodule Backend.ProtoMessage do
     Snapshot.SnapshotItem.new(%{
       id: to_proto_uuid(entity_id),
       item: CreationEvent.new(%{
+        center_of_mass_x: center_of_mass_x,
+        center_of_mass_y: center_of_mass_y,
         movement: movement |> Map.from_struct |> Backend.ProtoMessage.MovementUpdate.new,
         entity: encode_entity(entity_type, entity_meta),
       }),
     })
   end
 
+  defp to_snapshot_item(other), do: IO.inspect(["`to_snapshot_item` match error", other])
+
   defp encode_entity(entity_type, entity_meta) do
     # Convert map keys from strings to atoms
     # mapped_entity_meta = entity_meta |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
-    IO.inspect(["ENCODING ENTITY", entity_type, entity_meta])
+    # IO.inspect(["ENCODING ENTITY", entity_type, entity_meta])
     {entity_type, @entity_types[entity_type].new(entity_meta)}
   end
 

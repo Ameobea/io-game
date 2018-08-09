@@ -28,7 +28,7 @@ pub fn create_player_shape_handle(size: f32) -> ShapeHandle<f32> {
 
 pub enum EntityType {
     Player {
-        size: f32,
+        size: u32,
         movement: Movement,
         beam_aim: f32,
         beam_on: bool,
@@ -85,7 +85,7 @@ impl EntityType {
 
     pub fn get_shape_handle(&self) -> ShapeHandle<f32> {
         match self {
-            EntityType::Player { size, .. } => create_player_shape_handle(*size),
+            EntityType::Player { size, .. } => create_player_shape_handle(*size as f32),
             EntityType::Asteroid { vertices, .. } => {
                 let shape = ConvexPolygon::try_new(vertices.clone())
                     .expect("Unable to compute `ConvexPolygon` from asteroid vertices!");

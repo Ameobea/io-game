@@ -52,6 +52,7 @@ impl PhysicsWorldInner {
     pub fn new() -> Self {
         let mut world = World::new();
         world.set_contact_model(SignoriniModel::new());
+        world.set_timestep(CONF.physics.engine_time_step);
 
         let mut uuid_map = BTreeMap::new();
         let mut handle_map = BTreeMap::new();
@@ -563,8 +564,8 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
 }
 
 /// Adds a new user into the world with a given UUID, returning the location at which it was
-/// spawned in.
-pub fn spawn_user(uuid: String) -> MovementUpdate {
+/// spawned in.  Returns `(center_of_mass_x, center_of_mass_y, MovementUpdate)`
+pub fn spawn_user(uuid: String) -> (f32, f32, MovementUpdate) {
     let player_shape_handle = create_player_shape_handle(DEFAULT_PLAYER_SIZE);
     // TODO: decide where to spawn the user some better way
     let pos = Isometry2::new(Vector2::new(200.0, 200.0), 0.0);
@@ -574,7 +575,7 @@ pub fn spawn_user(uuid: String) -> MovementUpdate {
     let inertia = player_shape_handle.inertia(1.0);
     let center_of_mass = player_shape_handle.center_of_mass();
 
-    WORLD.apply(move |world| {
+    let com = WORLD.apply(move |world| {
         let &mut PhysicsWorldInner {
             ref mut uuid_map,
             ref mut handle_map,
@@ -613,7 +614,7 @@ pub fn spawn_user(uuid: String) -> MovementUpdate {
             (
                 uuid.clone(),
                 EntityType::Player {
-                    size: DEFAULT_PLAYER_SIZE,
+                    size: DEFAULT_PLAYER_SIZE as u32,
                     movement: Movement::Stop,
                     beam_aim: 0.0,
                     beam_on: false,
@@ -623,16 +624,20 @@ pub fn spawn_user(uuid: String) -> MovementUpdate {
         beam_sensors.insert(beam_handle, uuid);
         // Add the handle to the `user_handles` cache
         user_handles.push((body_handle, collider_handle));
+
+        world.rigid_body(body_handle).unwrap().center_of_mass()
     });
 
-    MovementUpdate {
-        pos_x: 0.0,
-        pos_y: 0.0,
+    let mvmt_update = MovementUpdate {
+        pos_x: 200.0,
+        pos_y: 200.0,
         rotation: 0.0,
         velocity_x: 0.0,
         velocity_y: 0.0,
         angular_velocity: 0.0,
-    }
+    };
+
+    (com.x, com.y, mvmt_update)
 }
 
 #[derive(NifStruct)]
@@ -650,6 +655,8 @@ pub struct MovementUpdate {
 #[module = "NativePhysics.EntityData"]
 pub struct EntityData<'a> {
     pub id: String,
+    pub center_of_mass_x: f32,
+    pub center_of_mass_y: f32,
     pub movement: MovementUpdate,
     pub entity_type: Atom,
     pub entity_meta: Term<'a>,
@@ -669,14 +676,16 @@ pub fn get_snapshot<'a>(env: Env<'a>, _args: &[Term<'a>]) -> NifResult<Term<'a>>
 
             let body_handle: BodyHandle = collider.data().body();
             let body = world.world.body(body_handle);
-            let velocity = match body {
-                Body::RigidBody(rigid_body) => rigid_body.velocity(),
+            let (velocity, center_of_mass) = match body {
+                Body::RigidBody(rigid_body) => (rigid_body.velocity(), rigid_body.center_of_mass()),
                 Body::Multibody(_) => unimplemented!(),
                 Body::Ground(_) => unimplemented!(),
             };
 
             let data = EntityData {
                 id: uuid.clone(),
+                center_of_mass_x: center_of_mass.x,
+                center_of_mass_y: center_of_mass.y,
                 movement: MovementUpdate {
                     pos_x: isometry.translation.vector.x,
                     pos_y: isometry.translation.vector.y,

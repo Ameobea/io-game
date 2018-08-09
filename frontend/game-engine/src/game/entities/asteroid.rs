@@ -1,5 +1,4 @@
-use nalgebra::geometry::Isometry2;
-use nalgebra::{Point2, Vector2};
+use nalgebra::{Isometry2, Point2, Translation2, Vector2};
 use ncollide2d::bounding_volume::{aabb::AABB, HasBoundingVolume};
 use ncollide2d::query::RayCast;
 use ncollide2d::shape::{Polyline, Shape};
@@ -8,23 +7,32 @@ use entity::Entity;
 use proto_utils::ServerMessageContent;
 use protos::server_messages::{AsteroidEntity as ProtoAsteroidEntity, MovementUpdate};
 use render_methods::fill_poly;
-use util::{log, Color};
+use util::{error, Color, Rotation, Velocity2};
 
 pub struct Asteroid {
+    /// Position of this entity in the world's coordinate space
     pub isometry: Isometry2<f32>,
+    /// Center of mass of the entity in the entity's coordinate space
+    pub local_center_of_mass: Point2<f32>,
+    /// Center of mass of the entity in the world's coordinate space
+    pub center_of_mass: Point2<f32>,
+    /// The vertices of this entity in the entity's local space
     pub verts: Vec<Point2<f32>>,
     pub color: Color,
-    pub delta_isometry: Isometry2<f32>,
+    /// Linear + angular speed of the asteroid in world units/time step
+    pub velocity: Velocity2,
+    /// The 2D line that forms the perimeter of this entity
     poly_line: Polyline<f32>,
+    /// The vertices of this entity stored as points, transformed into the world space
     transformed_coords_buffer: Vec<f32>,
 }
 
-fn process_movement(movement: &MovementUpdate) -> (Isometry2<f32>, Isometry2<f32>) {
+fn process_movement(movement: &MovementUpdate) -> (Isometry2<f32>, Velocity2) {
     let pos = Isometry2::new(
         Vector2::new(movement.get_pos_x(), movement.get_pos_y()),
         movement.get_rotation(),
     );
-    let velocity = Isometry2::new(
+    let velocity = Velocity2::new(
         Vector2::new(movement.get_velocity_x(), movement.get_velocity_y()),
         movement.get_angular_velocity(),
     );
@@ -35,45 +43,38 @@ fn process_movement(movement: &MovementUpdate) -> (Isometry2<f32>, Isometry2<f32
 impl Asteroid {
     pub fn new(
         verts: Vec<Point2<f32>>,
+        center_of_mass: Point2<f32>,
         isometry: Isometry2<f32>,
-        delta_isometry: Isometry2<f32>,
+        velocity: Velocity2,
     ) -> Self {
         let poly_line = Polyline::new(verts.clone());
         let vert_count = verts.len();
 
         Asteroid {
             verts,
+            local_center_of_mass: isometry.inverse() * center_of_mass,
+            center_of_mass,
             isometry,
-            delta_isometry,
+            velocity,
             color: Color::random(),
             poly_line,
             transformed_coords_buffer: Vec::with_capacity(vert_count * 2),
         }
     }
 
-    fn set_movement(&mut self, movement: &MovementUpdate) {
+    pub fn from_proto(
+        asteroid: &ProtoAsteroidEntity,
+        center_of_mass: Point2<f32>,
+        movement: &MovementUpdate,
+    ) -> Self {
         let (pos, velocity) = process_movement(movement);
-        self.isometry = pos;
-        self.delta_isometry = velocity;
-    }
+        let verts = asteroid
+            .get_vert_coords()
+            .chunks(2)
+            .map(|pt| Point2::new(pt[0], pt[1]))
+            .collect();
 
-    pub fn from_proto(asteroid: &ProtoAsteroidEntity, movement: &MovementUpdate) -> Self {
-        let (pos, velocity) = process_movement(movement);
-        log(format!(
-            "Creating asteroid with verts: {:?}, movement: {:?}, {:?}",
-            asteroid.get_vert_coords(),
-            pos,
-            velocity
-        ));
-        Asteroid::new(
-            asteroid
-                .get_vert_coords()
-                .chunks(2)
-                .map(|pt| Point2::new(pt[0], pt[1]))
-                .collect(),
-            pos,
-            velocity,
-        )
+        Asteroid::new(verts, center_of_mass, pos, velocity)
     }
 }
 
@@ -88,12 +89,27 @@ impl Shape<f32> for Asteroid {
 }
 
 impl Entity for Asteroid {
+    fn set_movement(&mut self, movement: &MovementUpdate) {
+        let (pos, velocity) = process_movement(movement);
+        self.isometry = pos;
+        self.velocity = velocity;
+    }
+
     fn render(&self, _cur_tick: usize) {
         fill_poly(&self.color, &self.transformed_coords_buffer);
     }
 
     fn tick(&mut self, _tick: usize) -> bool {
-        self.isometry *= self.delta_isometry;
+        // The linear + angular components of the velocity
+        let rotation = Rotation::new(self.velocity.angular);
+        let translation = Translation2::from_vector(self.velocity.linear);
+        // Vector from the origin to this entity's center of mass in world coordinates
+        let shift = Translation2::from_vector(self.center_of_mass.coords);
+        // The actual displacement of position that will occur
+        let disp = translation * shift * rotation * shift.inverse();
+        // Adjust the position of this entity by the displacement
+        self.isometry = disp * self.isometry;
+        self.center_of_mass = self.isometry * self.local_center_of_mass;
 
         self.transformed_coords_buffer.clear();
         for vert in &self.verts {
@@ -102,16 +118,16 @@ impl Entity for Asteroid {
             self.transformed_coords_buffer.push(transformed_point.y);
         }
 
-        self.delta_isometry != Isometry2::new(Vector2::new(0., 0.), 0.)
+        // self.velocity != Velocity2::zero()
+        true
     }
 
     fn apply_update(&mut self, update: &ServerMessageContent) -> bool {
         match &update {
-            &ServerMessageContent::movement_update(movement) => {
-                self.set_movement(&movement);
-                true
+            _ => {
+                error("Unexpected server message type received in entity update handler!");
+                false
             }
-            _ => false,
         }
     }
 

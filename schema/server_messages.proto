@@ -12,9 +12,13 @@ message AsteroidEntity {
 
 message CreationEvent {
   MovementUpdate movement = 1;
+  // The center of mass is the point around which the entity rotates.  This is different from the
+  // entity's origin unless especially adjusted for.
+  float center_of_mass_x = 2;
+  float center_of_mass_y = 3;
   oneof entity {
-    PlayerEntity player = 2;
-    AsteroidEntity asteroid = 3;
+    PlayerEntity player = 4;
+    AsteroidEntity asteroid = 5;
   }
 }
 
@@ -38,6 +42,8 @@ message Snapshot {
   repeated SnapshotItem items = 1;
 }
 
+// Contains information about the dynamic physics properties of some entity in space.
+// Contains both its position and velocity, both linear and angular
 message MovementUpdate {
   float pos_x = 1;
   float pos_y = 2;

@@ -6,7 +6,7 @@ use nalgebra::{Isometry2, Point2, Vector2};
 use nphysics2d::algebra::Velocity2;
 use rand::{thread_rng, Rng};
 
-use conf::CONF;
+// use conf::CONF;
 use physics::entities::EntityType;
 
 pub struct EntitySpawn {
@@ -41,27 +41,21 @@ fn create_asteroid() -> EntitySpawn {
             Vector2::new(
                 // rng.gen_range(CONF.game.world_min_x, CONF.game.world_max_x),
                 // rng.gen_range(CONF.game.world_min_y, CONF.game.world_max_y),
-                rng.gen_range(200., 500.),
-                rng.gen_range(200., 500.),
-            ).normalize(),
+                rng.gen_range(50., 500.),
+                rng.gen_range(50., 500.),
+            ),
             rng.gen_range(0., 2.0 * PI),
         ),
         entity: EntityType::Asteroid {
             vertices: get_asteroid_vertices(),
         },
         velocity: Velocity2::new(
-            Vector2::new(rng.gen_range(-2.0, 2.0), rng.gen_range(-2.0, 2.0)),
-            rng.gen_range(-2.0, 2.0),
+            Vector2::new(rng.gen_range(0.0, 2.0), rng.gen_range(0.0, 2.0)),
+            rng.gen_range(-0.2, 0.2),
         ),
     }
 }
 
 pub fn get_initial_entities() -> Vec<EntitySpawn> {
-    vec![
-        create_asteroid(),
-        create_asteroid(),
-        create_asteroid(),
-        create_asteroid(),
-        create_asteroid(),
-    ]
+    vec![create_asteroid(), create_asteroid()]
 }

@@ -39,7 +39,7 @@ defmodule BackendWeb.GameChannel do
     :ok = GameState.track_player(socket.topic, socket.assigns.player_id, %{})
 
     # Spawn the user into the Physics Engine world and generate a `MovementUpdate` for them
-    movement_update = NativePhysics.spawn_user(socket.assigns.player_id)
+    {com_x, com_y, movement_update} = NativePhysics.spawn_user(socket.assigns.player_id)
     internal_movement_update = movement_update
       |> Map.from_struct
       |> Backend.ProtoMessage.MovementUpdate.new
@@ -54,6 +54,8 @@ defmodule BackendWeb.GameChannel do
             :creation_event,
             CreationEvent.new(%{
               movement: internal_movement_update,
+              center_of_mass_x: com_x,
+              center_of_mass_y: com_y,
               entity: {
                 :player,
                 PlayerEntity.new(%{

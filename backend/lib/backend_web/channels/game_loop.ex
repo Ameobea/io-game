@@ -56,7 +56,7 @@ defmodule BackendWeb.GameLoop do
 
   defp update_topic(topic, topic_state, time_diff, player_inputs) do
     # TODO: only update all periodically rather than every tick
-    updates = NativePhysics.tick(player_inputs, true)
+    updates = NativePhysics.tick(player_inputs, false)
     if is_list(updates) do
       payload = updates
         |> Enum.map(&handle_update/1)
@@ -66,7 +66,7 @@ defmodule BackendWeb.GameLoop do
       IO.inspect(["PHYSICS ENGINE ERROR", player_inputs, updates])
     end
 
-    Map.put(topic_state, :needs_update, false)
+    topic_state
   end
 
   defp handle_update(%NativePhysics.Update{

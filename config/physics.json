@@ -2,5 +2,6 @@
   "accelerationPerTick": 0.15,
   "maxPlayerSpeed": 5.0,
   "frictionPerTick": 0.05,
-  "colliderMargin": 0.01
+  "colliderMargin": 0.01,
+  "engineTimeStep": 1.0
 }

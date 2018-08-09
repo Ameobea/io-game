@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::mem;
 
+use nalgebra::{UnitComplex, Vector2};
 use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
@@ -60,3 +61,22 @@ impl Color {
         Color { red, green, blue }
     }
 }
+
+/// Copied over directly from `nphysics2d`, just so that we don't have to suffer through the whole
+/// process of getting the crate to compile via webassembly.
+pub struct Velocity2 {
+    /// The linear velocity.
+    pub linear: Vector2<f32>,
+    /// The angular velocity.
+    pub angular: f32,
+}
+
+impl Velocity2 {
+    #[inline]
+    pub fn new(linear: Vector2<f32>, angular: f32) -> Self {
+        Velocity2 { linear, angular }
+    }
+}
+
+/// The rotation matrix type, copied directly from `nphysics`
+pub type Rotation<T> = UnitComplex<T>;

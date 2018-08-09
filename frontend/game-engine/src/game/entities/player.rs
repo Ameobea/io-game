@@ -11,7 +11,7 @@ use proto_utils::ServerMessageContent;
 use protos::message_common::MovementDirection as Direction;
 use protos::server_messages::MovementUpdate;
 use render_methods::{render_line, render_quad};
-use util::{error, log, Color};
+use util::{error, Color, Rotation, Velocity2};
 
 use super::super::effects::DemoCircle;
 
@@ -28,13 +28,14 @@ fn player_vertices(size: u16) -> Vec<Point2<f32>> {
 // The basic entity that is used right now.  They're all rendered as a square, but they all have
 /// a unique color.
 pub struct PlayerEntity {
-    color: Color,
-    isometry: Isometry2<f32>,
+    pub color: Color,
+    pub isometry: Isometry2<f32>,
+    /// Center of mass of the player's entity in world coordinates
+    pub center_of_mass: Point2<f32>,
     /// Which way the user is telling this entity to go
     pub direction_input: Direction,
     /// Velocity vector along the x/y axises in pixels/tick
-    pub velocity: Vector2<f32>,
-    pub angular_momentum: f32,
+    pub velocity: Velocity2,
     pub size: u16,
     vertices: Vec<Point2<f32>>,
     /// A normalized vector that represents the direction that the beam is pointing
@@ -42,47 +43,23 @@ pub struct PlayerEntity {
     /// If the beam is currently being fired
     pub beam_active: bool,
     /// Current x location of the mouse pointer from the last mouse move event
-    cached_mouse_pos: Point2<f32>,
+    pub cached_mouse_pos: Point2<f32>,
 }
 
 impl PlayerEntity {
-    pub fn new(pos: Point2<f32>, size: u16) -> Self {
+    pub fn new(pos: Point2<f32>, center_of_mass: Point2<f32>, size: u16) -> Self {
         PlayerEntity {
             color: Color::random(),
             isometry: Isometry2::new(Vector2::new(pos.x, pos.y), 0.0),
+            center_of_mass,
             direction_input: Direction::STOP,
-            velocity: Vector2::zeros(),
-            angular_momentum: 0.0,
+            velocity: Velocity2::new(Vector2::zeros(), 0.),
             size,
             vertices: player_vertices(size),
             beam_rotation: Vector2::new(1., 0.),
             beam_active: false,
             cached_mouse_pos: unsafe { Point2::new_uninitialized() },
         }
-    }
-
-    fn set_movement(
-        &mut self,
-        &MovementUpdate {
-            pos_x,
-            pos_y,
-            rotation,
-            velocity_x,
-            velocity_y,
-            angular_velocity,
-            ..
-        }: &MovementUpdate,
-    ) {
-        log(format!(
-            "{}, {}, {}, {}",
-            pos_x, pos_y, velocity_x, velocity_y
-        ));
-        self.isometry = Isometry2::from_parts(
-            Translation2::from_vector(Vector2::new(pos_x, pos_y)),
-            UnitComplex::from_angle(rotation),
-        );
-        self.velocity = Vector2::new(velocity_x, velocity_y);
-        self.angular_momentum = angular_velocity;
     }
 
     fn tick_movement(&mut self) {
@@ -99,14 +76,21 @@ impl PlayerEntity {
         };
 
         let acceleration = CONF.physics.acceleration_per_tick;
-        let max_speed = CONF.physics.max_player_speed;
         let movement_diff = Vector2::new(x_diff, y_diff) * acceleration;
-        if movement_diff.x + movement_diff.y < max_speed {
-            self.velocity += movement_diff;
-        }
+        self.velocity.linear += movement_diff;
 
-        self.isometry.translation.vector += self.velocity;
-        self.isometry.translation.vector *= 1. - CONF.physics.friction_per_tick;
+        // TODO: Generalize
+        // The linear + angular components of the velocity
+        let rotation = Rotation::new(self.velocity.angular);
+        let translation = Translation2::from_vector(self.velocity.linear);
+        // Vector from the origin to this entity's center of mass in world coordinates
+        let shift = Translation2::from_vector(self.center_of_mass.coords);
+        // The actual displacement of position that will occur
+        let disp = translation * shift * rotation * shift.inverse();
+        // Adjust the position of this entity by the displacement
+        self.isometry = disp * self.isometry;
+
+        self.velocity.linear *= 1. - CONF.physics.friction_per_tick;
     }
 
     pub fn update_beam(&mut self, mouse_pos: Point2<f32>) {
@@ -257,6 +241,25 @@ impl Entity for PlayerEntity {
         render_line(&line_color, 1, beam_start, beam_endpoint);
     }
 
+    fn set_movement(
+        &mut self,
+        &MovementUpdate {
+            pos_x,
+            pos_y,
+            rotation,
+            velocity_x,
+            velocity_y,
+            angular_velocity,
+            ..
+        }: &MovementUpdate,
+    ) {
+        self.isometry = Isometry2::from_parts(
+            Translation2::from_vector(Vector2::new(pos_x, pos_y)),
+            UnitComplex::from_angle(rotation),
+        );
+        self.velocity = Velocity2::new(Vector2::new(velocity_x, velocity_y), angular_velocity);
+    }
+
     // TODO: Account for angular momentum
     fn tick(&mut self, tick: usize) -> bool {
         self.tick_movement();
@@ -275,15 +278,11 @@ impl Entity for PlayerEntity {
             get_effects_manager().add_effect(box effect);
         }
 
-        self.velocity.x + self.velocity.y > 0.
+        self.velocity.linear.x + self.velocity.linear.y + self.velocity.angular > 0.
     }
 
     fn apply_update(&mut self, update: &ServerMessageContent) -> bool {
         match update {
-            ServerMessageContent::movement_update(movement_update) => {
-                self.set_movement(movement_update);
-                true
-            }
             _ => {
                 error("Unexpected server message type received in entity update handler!");
                 false

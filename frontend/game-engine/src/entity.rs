@@ -6,6 +6,7 @@ use ncollide2d::bounding_volume::aabb::AABB;
 use ncollide2d::shape::Shape;
 
 use proto_utils::ServerMessageContent;
+use protos::server_messages::MovementUpdate;
 
 pub trait Entity: Shape<f32> {
     fn render(&self, tick: usize);
@@ -24,4 +25,6 @@ pub trait Entity: Shape<f32> {
     fn get_isometry(&self) -> &Isometry2<f32>;
 
     fn get_vertices(&self) -> &[Point2<f32>];
+
+    fn set_movement(&mut self, &MovementUpdate);
 }

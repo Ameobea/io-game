@@ -68,13 +68,14 @@ pub struct GameState {
     cur_tick: usize,
     pub entity_map: DBVT<f32, Uuid, AABB<f32>>,
     pub uuid_map: BTreeMap<Uuid, (DBVTLeafId, Box<dyn Entity>)>,
+    player_uuid: Uuid,
 }
 
 impl GameState {
     pub fn new(user_id: Uuid) -> Self {
         let mut entity_map = DBVT::new();
         // set up the player entity fast path
-        let player_entity = box PlayerEntity::new(Point2::origin(), 20);
+        let player_entity = box PlayerEntity::new(Point2::origin(), Point2::origin(), 20);
         let player_entity_ptr = Box::into_raw(player_entity);
         unsafe { PLAYER_ENTITY_FASTPATH = player_entity_ptr };
         let player_entity = unsafe { Box::from_raw(player_entity_ptr) };
@@ -88,6 +89,7 @@ impl GameState {
             cur_tick: 0,
             entity_map,
             uuid_map,
+            player_uuid: user_id,
         }
     }
 
@@ -143,6 +145,11 @@ impl GameState {
                     }
                 };
 
+                if let ServerMessageContent::movement_update(movement) = update {
+                    entity.set_movement(&movement);
+                    return;
+                }
+
                 if entity.apply_update(&update) {
                     self.entity_map.remove(*leaf_id);
                     let new_bv = entity.get_bounding_volume();
@@ -158,11 +165,18 @@ impl GameState {
     /// contents of the snapshot
     fn apply_snapshot(&mut self, snapshot: Snapshot) {
         log("Clearing game state and applying snapshot...");
-        // Too bad we have to do it like this.  TODO: Add a `clear()` method to `DBVT` via PR
-        for (_uuid, (leaf_id, _entity)) in self.uuid_map.iter() {
+        // Too bad we have to do it like this.  TODO: Add a `clear()` method to `DBVT` via PR?
+        for (uuid, (leaf_id, _entity)) in self.uuid_map.iter() {
+            if *uuid == self.player_uuid {
+                continue;
+            }
+
             self.entity_map.remove(*leaf_id);
         }
+        // Clear the UUID map, but keep the player in it
+        let player_entry = self.uuid_map.remove(&self.player_uuid).unwrap();
         self.uuid_map.clear();
+        self.uuid_map.insert(self.player_uuid, player_entry);
 
         for mut snapshot_item in snapshot.items.into_iter() {
             log("Applying snapshot item...");
@@ -201,13 +215,30 @@ impl GameState {
             }
         };
         let movement = creation_evt.get_movement();
+        let center_of_mass = Point2::new(
+            creation_evt.get_center_of_mass_x(),
+            creation_evt.get_center_of_mass_y(),
+        );
 
         let boxed_entity: Box<dyn Entity> = match entity {
-            EntityType::player(player) => box PlayerEntity::new(
-                Point2::new(movement.get_pos_x(), movement.get_pos_y()),
-                player.get_size() as u16,
-            ),
-            EntityType::asteroid(asteroid) => box Asteroid::from_proto(asteroid, movement),
+            EntityType::player(proto_player) => if entity_id == self.player_uuid {
+                // If this is the spawn event for our own entity, just update it in-place so that
+                // we don't have to mess with the static fastpath
+                let player = player_entity_fastpath();
+                player.set_movement(movement);
+                player.center_of_mass = center_of_mass;
+                player.size = proto_player.size as u16;
+                return;
+            } else {
+                box PlayerEntity::new(
+                    Point2::new(movement.get_pos_x(), movement.get_pos_y()),
+                    center_of_mass,
+                    proto_player.get_size() as u16,
+                )
+            },
+            EntityType::asteroid(asteroid) => {
+                box Asteroid::from_proto(asteroid, center_of_mass, movement)
+            }
         };
 
         let leaf = DBVTLeaf::new(boxed_entity.get_bounding_volume(), entity_id);
