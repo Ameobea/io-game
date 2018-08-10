@@ -8,10 +8,11 @@
     nll,
 )]
 
+extern crate collide2d;
 extern crate libcomposition;
 extern crate nalgebra;
-extern crate ncollide2d;
 extern crate noise;
+extern crate nphysics;
 extern crate protobuf;
 extern crate uuid;
 extern crate wasm_bindgen;

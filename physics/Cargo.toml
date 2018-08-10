@@ -4,18 +4,22 @@ name = "physics"
 version = "0.1.0"
 
 [build-dependencies]
-config_loader = {path = "../config_loader"}
+config_loader = { path = "../config_loader" }
 
 [dependencies]
 lazy_static = "1.1.0"
 nalgebra = "0.16.0"
 ncollide2d = "0.17.0"
-nphysics2d = "0.9.0"
-rustler = "0.18.0"
-rustler_codegen = "0.18.0"
+nphysics2d = { git = "https://github.com/Ameobea/nphysics.git" }
+rustler = { version = "0.18.0", optional = true }
+rustler_codegen = { version = "0.18.0", optional = true }
 uuid = { version = "0.6.5", features = ["v4"] }
-rand = "0.5.3"
+rand = "0.5.5"
 
 [lib]
-crate_type = ["dylib"]
+crate_type = ["rlib", "dylib"]
 name = "native_physics"
+
+[features]
+default = ["elixir-interop"]
+elixir-interop = ["rustler", "rustler_codegen"]

@@ -5,6 +5,7 @@ use std::mem;
 use std::ptr;
 
 use nalgebra::{Isometry2, Point2, Vector2};
+use native_physics::physics::PhysicsWorld;
 use ncollide2d::bounding_volume::{aabb::AABB, BoundingVolume};
 use ncollide2d::partitioning::{BVTVisitor, DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
@@ -65,10 +66,8 @@ impl<'a> BVTVisitor<Uuid, AABB<f32>> for CollisionVisitor<'a> {
 }
 
 pub struct GameState {
-    cur_tick: usize,
-    pub entity_map: DBVT<f32, Uuid, AABB<f32>>,
-    pub uuid_map: BTreeMap<Uuid, (DBVTLeafId, Box<dyn Entity>)>,
     player_uuid: Uuid,
+    // world:
 }
 
 impl GameState {

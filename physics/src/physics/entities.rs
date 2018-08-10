@@ -2,10 +2,8 @@
 
 use nalgebra::{Point2, Vector2};
 use ncollide2d::shape::{ConvexPolygon, Cuboid, ShapeHandle};
-use rustler::{types::atom::Atom, Encoder, Env, NifResult, Term};
 
-use super::super::atoms;
-use super::{Movement, COLLIDER_MARGIN};
+use super::{world::COLLIDER_MARGIN, Movement};
 use conf::CONF;
 
 lazy_static! {
@@ -38,16 +36,24 @@ pub enum EntityType {
     },
 }
 
-fn make_map<'a>(env: Env<'a>, items: &[(Atom, &Encoder)]) -> NifResult<Term<'a>> {
-    let mut map = Term::map_new(env);
-    for (key, val) in items {
-        map = map.map_put(key.encode(env), val.encode(env))?;
-    }
-    Ok(map)
-}
-
 impl EntityType {
-    pub fn to_data<'a>(&self, env: Env<'a>) -> NifResult<(Atom, Term<'a>)> {
+    #[cfg(feature = "elixir-interop")]
+    pub fn to_data<'a>(
+        &self,
+        env: rustler::Env<'a>,
+    ) -> rustler::NifResult<(rustler::types::atom::Atom, rustler::Term<'a>)> {
+        use rustler::{types::atom::Atom, Encoder, Env, NifResult, Term};
+
+        use super::super::atoms;
+
+        fn make_map<'a>(env: Env<'a>, items: &[(Atom, &Encoder)]) -> NifResult<Term<'a>> {
+            let mut map = Term::map_new(env);
+            for (key, val) in items {
+                map = map.map_put(key.encode(env), val.encode(env))?;
+            }
+            Ok(map)
+        }
+
         match self {
             EntityType::Player {
                 size,
