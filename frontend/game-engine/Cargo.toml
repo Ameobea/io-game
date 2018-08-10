@@ -15,6 +15,7 @@ ncollide2d = "0.17.0"
 noise = "0.5.1"
 protobuf = "2.0.4"
 physics = { path = "../../physics", default-features = false }
+nphysics2d = { git = "https://github.com/Ameobea/nphysics.git" }
 
 [dependencies.libcomposition]
 default-features = false

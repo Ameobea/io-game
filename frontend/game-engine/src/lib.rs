@@ -8,11 +8,12 @@
     nll,
 )]
 
-extern crate collide2d;
 extern crate libcomposition;
 extern crate nalgebra;
+extern crate native_physics;
+extern crate ncollide2d;
 extern crate noise;
-extern crate nphysics;
+extern crate nphysics2d;
 extern crate protobuf;
 extern crate uuid;
 extern crate wasm_bindgen;
@@ -26,7 +27,7 @@ pub mod entity;
 pub mod game;
 pub mod game_state;
 pub mod phoenix_proto;
-pub mod physics;
+pub mod physics_math;
 pub mod proto_utils;
 pub mod protos;
 pub mod render_effects;

@@ -1,4 +1,4 @@
-#![feature(extern_prelude)]
+#![feature(extern_prelude, nll)]
 
 #[macro_use]
 extern crate lazy_static;

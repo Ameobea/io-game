@@ -8,6 +8,8 @@ pub mod entities;
 pub mod server;
 pub mod world;
 
+pub use self::world::PhysicsWorldInner;
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum Movement {
     Up,

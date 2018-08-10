@@ -1,5 +1,7 @@
 use std::mem;
 
+use nalgebra::{Isometry2, Vector2};
+use nphysics2d::algebra::Velocity2;
 use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
 
@@ -9,7 +11,9 @@ use protos::channel_messages::Event;
 use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::Uuid as ProtoUuid;
 pub use protos::server_messages::ServerMessage_Payload_oneof_payload as ServerMessageContent;
-use protos::server_messages::{ServerMessage, ServerMessage_Payload as ServerMessagePayload};
+use protos::server_messages::{
+    MovementUpdate, ServerMessage, ServerMessage_Payload as ServerMessagePayload,
+};
 use util::{error, warn};
 
 pub struct InnerServerMessage {
@@ -61,6 +65,18 @@ impl Into<ProtoUuid> for Uuid {
         id.set_data_2(data_2);
 
         id
+    }
+}
+
+impl<'a> Into<(Isometry2<f32>, Velocity2<f32>)> for &'a MovementUpdate {
+    fn into(self) -> (Isometry2<f32>, Velocity2<f32>) {
+        let pos = Isometry2::new(Vector2::new(self.pos_x, self.pos_y), self.rotation);
+        let velocity = Velocity2::new(
+            Vector2::new(self.velocity_x, self.velocity_y),
+            self.angular_velocity,
+        );
+
+        (pos, velocity)
     }
 }
 
