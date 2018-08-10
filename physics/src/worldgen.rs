@@ -50,8 +50,8 @@ fn create_asteroid() -> EntitySpawn {
             vertices: get_asteroid_vertices(),
         },
         velocity: Velocity2::new(
-            Vector2::new(rng.gen_range(0.0, 2.0), rng.gen_range(0.0, 2.0)),
-            rng.gen_range(-0.2, 0.2),
+            Vector2::new(rng.gen_range(0.0, 0.05), rng.gen_range(0.0, 0.05)),
+            rng.gen_range(-0.025, 0.025),
         ),
     }
 }

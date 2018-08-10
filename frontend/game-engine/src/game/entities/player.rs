@@ -30,6 +30,8 @@ fn player_vertices(size: u16) -> Vec<Point2<f32>> {
 pub struct PlayerEntity {
     pub color: Color,
     pub isometry: Isometry2<f32>,
+    /// Center of mass of the entity in the entity's coordinate space
+    pub local_center_of_mass: Point2<f32>,
     /// Center of mass of the player's entity in world coordinates
     pub center_of_mass: Point2<f32>,
     /// Which way the user is telling this entity to go
@@ -46,11 +48,31 @@ pub struct PlayerEntity {
     pub cached_mouse_pos: Point2<f32>,
 }
 
+impl Into<Vector2<f32>> for Direction {
+    fn into(self) -> Vector2<f32> {
+        let (dir_x, dir_y): (f32, f32) = match self {
+            Direction::UP => (0., -1.),
+            Direction::UP_RIGHT => (1., -1.),
+            Direction::RIGHT => (1., 0.),
+            Direction::DOWN_RIGHT => (1., 1.),
+            Direction::DOWN => (0., 1.),
+            Direction::DOWN_LEFT => (-1., 1.),
+            Direction::LEFT => (-1., 0.),
+            Direction::UP_LEFT => (-1., -1.),
+            Direction::STOP => {
+                return Vector2::new(0., 0.);
+            }
+        };
+        Vector2::new(dir_x, dir_y).normalize()
+    }
+}
+
 impl PlayerEntity {
-    pub fn new(pos: Point2<f32>, center_of_mass: Point2<f32>, size: u16) -> Self {
+    pub fn new(isometry: Isometry2<f32>, center_of_mass: Point2<f32>, size: u16) -> Self {
         PlayerEntity {
             color: Color::random(),
-            isometry: Isometry2::new(Vector2::new(pos.x, pos.y), 0.0),
+            isometry,
+            local_center_of_mass: isometry.inverse() * center_of_mass,
             center_of_mass,
             direction_input: Direction::STOP,
             velocity: Velocity2::new(Vector2::zeros(), 0.),
@@ -63,21 +85,11 @@ impl PlayerEntity {
     }
 
     fn tick_movement(&mut self) {
-        let (x_diff, y_diff) = match self.direction_input {
-            Direction::DOWN => (0., 1.),
-            Direction::DOWN_LEFT => (-1., 1.),
-            Direction::DOWN_RIGHT => (1., 1.),
-            Direction::LEFT => (-1., 0.),
-            Direction::RIGHT => (1., 0.),
-            Direction::STOP => (0., 0.),
-            Direction::UP => (0., -1.),
-            Direction::UP_LEFT => (-1., -1.),
-            Direction::UP_RIGHT => (1., -1.),
-        };
-
-        let acceleration = CONF.physics.acceleration_per_tick;
-        let movement_diff = Vector2::new(x_diff, y_diff) * acceleration;
-        self.velocity.linear += movement_diff;
+        // Apply the force from movement to the entity and simulate its effect on the entity's
+        // acceleration and velocity
+        let mut movement_acceleration: Vector2<f32> = self.direction_input.into();
+        movement_acceleration *= CONF.physics.acceleration_per_tick;
+        self.velocity.linear += movement_acceleration * CONF.physics.engine_time_step;
 
         // TODO: Generalize
         // The linear + angular components of the velocity
@@ -89,8 +101,9 @@ impl PlayerEntity {
         let disp = translation * shift * rotation * shift.inverse();
         // Adjust the position of this entity by the displacement
         self.isometry = disp * self.isometry;
+        self.center_of_mass = self.isometry * self.local_center_of_mass;
 
-        self.velocity.linear *= 1. - CONF.physics.friction_per_tick;
+        self.velocity.linear *= 1.0 - CONF.physics.friction_per_tick;
     }
 
     pub fn update_beam(&mut self, mouse_pos: Point2<f32>) {

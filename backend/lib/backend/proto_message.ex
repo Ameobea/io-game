@@ -50,7 +50,6 @@ defmodule Backend.ProtoMessage do
       ref: message.ref,
       payload: encode_payload(message.payload),
     })
-    # IO.inspect(["~~!~!~!~!~!~!", msg])
     ServerChannelMessage.encode(msg)
   end
 

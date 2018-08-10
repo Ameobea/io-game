@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::mem;
 use std::ptr;
 
-use nalgebra::Point2;
+use nalgebra::{Isometry2, Point2, Vector2};
 use ncollide2d::bounding_volume::{aabb::AABB, BoundingVolume};
 use ncollide2d::partitioning::{BVTVisitor, DBVTLeaf, DBVTLeafId, DBVT};
 use uuid::Uuid;
@@ -72,24 +72,12 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(user_id: Uuid) -> Self {
-        let mut entity_map = DBVT::new();
-        // set up the player entity fast path
-        let player_entity = box PlayerEntity::new(Point2::origin(), Point2::origin(), 20);
-        let player_entity_ptr = Box::into_raw(player_entity);
-        unsafe { PLAYER_ENTITY_FASTPATH = player_entity_ptr };
-        let player_entity = unsafe { Box::from_raw(player_entity_ptr) };
-        let player_entity = player_entity as Box<dyn Entity>;
-        let leaf = DBVTLeaf::new(player_entity.get_bounding_volume(), user_id);
-        let leaf_id = entity_map.insert(leaf);
-        let mut uuid_map = BTreeMap::new();
-        uuid_map.insert(user_id, (leaf_id, player_entity));
-
+    pub fn new() -> Self {
         GameState {
             cur_tick: 0,
-            entity_map,
-            uuid_map,
-            player_uuid: user_id,
+            entity_map: DBVT::new(),
+            uuid_map: BTreeMap::new(),
+            player_uuid: Uuid::nil(),
         }
     }
 
@@ -133,6 +121,9 @@ impl GameState {
                 None => warn("Received `StatusUpdate` with no payload"),
             },
             ServerMessageContent::snapshot(snapshot) => self.apply_snapshot(snapshot),
+            ServerMessageContent::connect_successful(player_id) => {
+                self.init_player_fastpath(player_id.into())
+            }
             _ => {
                 let (leaf_id, entity) = match self.uuid_map.get_mut(&entity_id) {
                     Some(key) => key,
@@ -230,11 +221,12 @@ impl GameState {
                 player.size = proto_player.size as u16;
                 return;
             } else {
-                box PlayerEntity::new(
-                    Point2::new(movement.get_pos_x(), movement.get_pos_y()),
-                    center_of_mass,
-                    proto_player.get_size() as u16,
-                )
+                let pos = Isometry2::new(
+                    Vector2::new(movement.get_pos_x(), movement.get_pos_y()),
+                    movement.get_angular_velocity(),
+                );
+
+                box PlayerEntity::new(pos, center_of_mass, proto_player.get_size() as u16)
             },
             EntityType::asteroid(asteroid) => {
                 box Asteroid::from_proto(asteroid, center_of_mass, movement)
@@ -257,5 +249,18 @@ impl GameState {
         self.entity_map.visit(&mut visitor);
 
         found_uuids
+    }
+
+    pub fn init_player_fastpath(&mut self, player_id: Uuid) {
+        self.player_uuid = player_id;
+        let player_entity =
+            box PlayerEntity::new(Isometry2::new(Vector2::zeros(), 0.0), Point2::origin(), 20);
+        let player_entity_ptr = Box::into_raw(player_entity);
+        unsafe { PLAYER_ENTITY_FASTPATH = player_entity_ptr };
+        let player_entity = unsafe { Box::from_raw(player_entity_ptr) };
+        let player_entity = player_entity as Box<dyn Entity>;
+        let leaf = DBVTLeaf::new(player_entity.get_bounding_volume(), player_id);
+        let leaf_id = self.entity_map.insert(leaf);
+        self.uuid_map.insert(player_id, (leaf_id, player_entity));
     }
 }

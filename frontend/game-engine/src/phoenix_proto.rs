@@ -10,7 +10,6 @@ use protos::server_messages::ServerMessage;
 use util::{error, warn};
 
 use protobuf::{parse_from_bytes, Message};
-use uuid::Uuid;
 
 static mut CUR_REF: usize = 1;
 
@@ -54,13 +53,10 @@ pub fn send_connect_message() {
     send_channel_message(CONF.network.game_channel_name, evt, Some(connect_msg))
 }
 
-pub fn join_game_channel() -> Uuid {
+pub fn join_game_channel() {
     let mut evt = Event::new();
     evt.set_phoenix_event(PhoenixEvent::Join);
     send_channel_message(CONF.network.game_channel_name, evt, None);
-
-    // TODO: Get this from the reply (?)
-    Uuid::nil()
 }
 
 fn warn_msg(msg_type: &str, topic: &str) {

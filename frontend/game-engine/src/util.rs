@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::mem;
+use std::ops::Add;
 
 use nalgebra::{UnitComplex, Vector2};
 use uuid::Uuid;
@@ -49,6 +50,7 @@ pub fn v4_uuid() -> Uuid {
     unsafe { mem::transmute(high_quality_entropy) }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct Color {
     pub red: u8,
     pub green: u8,
@@ -64,6 +66,7 @@ impl Color {
 
 /// Copied over directly from `nphysics2d`, just so that we don't have to suffer through the whole
 /// process of getting the crate to compile via webassembly.
+#[derive(Clone, Copy, Debug)]
 pub struct Velocity2 {
     /// The linear velocity.
     pub linear: Vector2<f32>,
@@ -75,6 +78,15 @@ impl Velocity2 {
     #[inline]
     pub fn new(linear: Vector2<f32>, angular: f32) -> Self {
         Velocity2 { linear, angular }
+    }
+}
+
+impl Add<Velocity2> for Velocity2 {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: Self) -> Self {
+        Velocity2::new(self.linear + rhs.linear, self.angular + rhs.angular)
     }
 }
 

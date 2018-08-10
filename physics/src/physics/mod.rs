@@ -8,7 +8,7 @@ use nalgebra::{Isometry2, Vector2};
 use ncollide2d::events::ContactEvent;
 use ncollide2d::query::Proximity;
 use ncollide2d::world::CollisionObject;
-use nphysics2d::algebra::Force2;
+use nphysics2d::algebra::Velocity2;
 use nphysics2d::object::{
     Body, BodyHandle, ColliderData, ColliderHandle, Material, RigidBody, SensorHandle,
 };
@@ -123,21 +123,22 @@ impl PhysicsWorldInner {
             }
         };
 
-        match diff.action {
-            InternalUserDiffAction::Movement(movement) => {
-                let rigid_body: &mut RigidBody<f32> = self
-                    .world
-                    .rigid_body_mut(*body_handle)
-                    .expect("ERROR: Player wasn't a rigid body!");
+        let (uuid, entity) = self
+            .handle_map
+            .get_mut(collider_handle)
+            .expect("ERROR: No matching entry in `handle_map` for entry in `uuid_map`!");
 
-                let force: Force2<f32> = movement.into();
-                rigid_body.apply_force(&force);
-            }
+        let expected_player =
+            || println!("ERROR: Received `beam_aim` update for non-player entity!");
+
+        match diff.action {
+            InternalUserDiffAction::Movement(new_movement) => match *entity {
+                EntityType::Player {
+                    ref mut movement, ..
+                } => *movement = new_movement,
+                _ => expected_player(),
+            },
             InternalUserDiffAction::BeamAim { x, y } => {
-                let (_, entity) = self
-                    .handle_map
-                    .get_mut(collider_handle)
-                    .expect("ERROR: No matching entry in `handle_map` for entry in `uuid_map`!");
                 match *entity {
                     EntityType::Player {
                         ref mut beam_aim, ..
@@ -166,15 +167,10 @@ impl PhysicsWorldInner {
                             None => (),
                         }
                     }
-                    _ => println!("ERROR: Received `beam_aim` update for non-player entity!"),
+                    _ => expected_player(),
                 }
             }
             InternalUserDiffAction::BeamToggle(new_beam_on) => {
-                let (uuid, entity) = self
-                    .handle_map
-                    .get_mut(collider_handle)
-                    .expect("ERROR: No matching entry in `handle_map` for entry in `uuid_map`!");
-
                 // Remove the existing beam sensor
                 match *entity {
                     EntityType::Player {
@@ -287,7 +283,7 @@ pub enum InternalUserDiffAction {
     Username(String),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Movement {
     Up,
     UpRight,
@@ -333,8 +329,8 @@ impl Into<Atom> for Movement {
     }
 }
 
-impl Into<Force2<f32>> for Movement {
-    fn into(self) -> Force2<f32> {
+impl Into<Vector2<f32>> for Movement {
+    fn into(self) -> Vector2<f32> {
         let (dir_x, dir_y): (f32, f32) = match self {
             Movement::Up => (0., -1.),
             Movement::UpRight => (1., -1.),
@@ -344,17 +340,17 @@ impl Into<Force2<f32>> for Movement {
             Movement::DownLeft => (-1., 1.),
             Movement::Left => (-1., 0.),
             Movement::UpLeft => (-1., -1.),
-            Movement::Stop => (0., 0.),
+            Movement::Stop => {
+                return Vector2::new(0., 0.);
+            }
         };
-        let direction_vector: Vector2<f32> = Vector2::new(dir_x, dir_y).normalize();
-
-        Force2::linear(direction_vector * CONF.physics.acceleration_per_tick)
+        Vector2::new(dir_x, dir_y).normalize()
     }
 }
 
 /// An update that is returned from the physics world as the result of a tick.  These should
 /// generally map to updates of the outer state held by Elixir or updates sent directly to users.
-#[derive(NifStruct)]
+#[derive(Debug, NifStruct)]
 #[module = "NativePhysics.Update"]
 pub struct Update<'a> {
     id: String,
@@ -445,7 +441,6 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
                 .rigid_body_mut(*user_body_handle)
                 .expect("ERROR: Player wasn't a rigid body!");
 
-            // Apply thrust force from movement input
             let (_uuid, user_data) = handle_map
                 .get(user_collider_handle)
                 .expect("User collider handle isn't in the `handle_map`!");
@@ -453,13 +448,24 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
                 EntityType::Player { movement, .. } => (*movement),
                 _ => panic!("Expected a player entity but the entity data wasn't one!"),
             };
-            let force: Force2<f32> = movement.into();
-            user_rigid_body.apply_force(&force);
+
+            // The physics engine puts entities to sleep if their energies are low enough, causing
+            // them to not be simulated.  We manually wake up the player to ensure that the changes
+            // we apply to their velocities from movement directions are taken into account by the
+            // physics engine.unreachable!
+            user_rigid_body.activate();
+
+            // Apply thrust force from movement input
+            let velocity = *user_rigid_body.velocity();
+            let mut movement_force: Vector2<f32> = movement.into();
+            movement_force *= CONF.physics.acceleration_per_tick;
+            let mut new_velocity =
+                Velocity2::new(velocity.linear + movement_force, velocity.angular);
 
             // Apply friction
-            let linear_velocity = user_rigid_body.velocity().linear;
-            user_rigid_body
-                .set_linear_velocity(linear_velocity * (1.0 - CONF.physics.friction_per_tick));
+            let friction_adjusted_new_velocity = new_velocity;
+
+            user_rigid_body.set_velocity(friction_adjusted_new_velocity);
         }
 
         // Step the physics simulation

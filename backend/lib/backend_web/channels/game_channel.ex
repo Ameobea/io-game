@@ -18,6 +18,13 @@ defmodule BackendWeb.GameChannel do
     send(self(), :after_join)
     uuid = UUID.uuid4()
 
+    # Send a message indicating that the connection was a success and giving the player their UUID
+    proto_uuid = ProtoMessage.to_proto_uuid(uuid)
+    connect_success_payload = ServerMessage.Payload.new(%{
+      id: proto_uuid,
+      payload: {:connect_successful, proto_uuid},
+    })
+
     # Send a snapshot of the current game state to the user
     snapshot = GameState.get_topic(socket.topic) |> ProtoMessage.encode_game_state_to_snapshot
     snapshot_payload = ServerMessage.Payload.new(%{
@@ -30,7 +37,7 @@ defmodule BackendWeb.GameChannel do
 
     {
       :ok,
-      [snapshot_payload],
+      [connect_success_payload, snapshot_payload],
       assign(socket, :player_id, uuid)
     }
   end
@@ -67,6 +74,7 @@ defmodule BackendWeb.GameChannel do
         }),
       },
     })
+
     broadcast! socket, "game", %{response: [creation_msg_payload]}
     {:noreply, socket}
   end

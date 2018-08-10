@@ -38,11 +38,9 @@ use game_state::{
 };
 use phoenix_proto::{join_game_channel, send_connect_message};
 use proto_utils::parse_server_message;
-use protos::server_messages::{
-    AsteroidEntity, CreationEvent, CreationEvent_oneof_entity as EntityType, MovementUpdate,
-};
+
 use render_effects::RenderEffectManager;
-use util::{error, v4_uuid};
+use util::error;
 
 #[wasm_bindgen(module = "./inputWrapper")]
 extern "C" {
@@ -83,18 +81,20 @@ extern "C" {
 static mut CANVAS_WIDTH: f32 = 0.0;
 static mut CANVAS_HEIGHT: f32 = 0.0;
 
+/// Called by TypeScript after the WebSocket has been initialized.  Sends the message to join the
+/// game channel.
 #[wasm_bindgen]
 pub fn init(canvas_width: f32, canvas_height: f32) {
-    panic::set_hook(Box::new(|info: &panic::PanicInfo| error(info.to_string())));
+    panic::set_hook(box |info: &panic::PanicInfo| error(info.to_string()));
 
     unsafe {
         CANVAS_WIDTH = canvas_width;
         CANVAS_HEIGHT = canvas_height;
     }
 
-    let player_id = join_game_channel();
+    join_game_channel();
 
-    let game_state = box GameState::new(player_id);
+    let game_state = box GameState::new();
     unsafe { STATE = Box::into_raw(game_state) };
 
     let effects_manager = box RenderEffectManager::new();
@@ -125,29 +125,4 @@ pub fn tick() {
 #[wasm_bindgen]
 pub fn handle_channel_message(bytes: &[u8]) {
     phoenix_proto::handle_server_msg(bytes)
-}
-
-#[wasm_bindgen]
-pub fn spawn_asteroid(
-    point_coords: Vec<f32>,
-    offset_x: f32,
-    offset_y: f32,
-    rotation_rads: f32,
-    velocity_x: f32,
-    velocity_y: f32,
-    angular_momentum: f32,
-) {
-    let mut entity = AsteroidEntity::new();
-    entity.set_vert_coords(point_coords);
-    let mut movement = MovementUpdate::new();
-    movement.set_pos_x(offset_x);
-    movement.set_pos_y(offset_y);
-    movement.set_rotation(rotation_rads);
-    movement.set_velocity_x(velocity_x);
-    movement.set_velocity_y(velocity_y);
-    movement.set_angular_velocity(angular_momentum);
-    let mut creation_evt = CreationEvent::new();
-    creation_evt.entity = Some(EntityType::asteroid(entity));
-
-    get_state().create_entity(v4_uuid(), &creation_evt);
 }

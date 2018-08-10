@@ -10,7 +10,7 @@ defmodule BackendWeb.GameLoop do
 
   def init(_) do
     start_tick()
-    {:ok, {get_time(), %{}}}
+    {:ok, {0, get_time(), %{}}}
   end
 
   def start_link() do
@@ -26,42 +26,48 @@ defmodule BackendWeb.GameLoop do
     {:noreply, run_tick(state)}
   end
 
-  def handle_call({:handle_message, topic, new_message}, _from, {time, messages}) do
+  def handle_call({:handle_message, topic, new_message}, _from, {tick, time, messages}) do
     diff = NativePhysics.UserDiff.new(new_message)
-    {:reply,
-    nil,
+    {
+      :reply,
+      nil,
       {
+        tick,
         time,
         Map.put(messages, topic, [diff | Map.get(messages, topic, [])])
       }
-  }
+    }
   end
 
-  defp run_tick({prev_time, messages}) do
+  defp run_tick({tick, prev_time, messages}) do
     curr_time = get_time()
     time_difference = (curr_time - prev_time) / @nanoseconds_to_seconds
 
     GameState.list_topics()
-    |> update_topics(time_difference, messages)
+    |> update_topics(tick, time_difference, messages)
 
-    {curr_time, %{}}
+    {tick + 1, curr_time, %{}}
   end
 
-  defp update_topics([], _time_diff, _messages), do: nil
-  defp update_topics([topic | rest], time_diff, messages) do
-    GameState.update_topic(topic, &update_topic(topic, &1, time_diff, Map.get(messages, topic, [])))
+  defp update_topics([], _tick, _time_diff, _messages), do: nil
+  defp update_topics([topic | rest], tick, time_diff, messages) do
+    GameState.update_topic(topic, &update_topic(topic, &1, tick, time_diff, Map.get(messages, topic, [])))
 
-    update_topics(rest, time_diff, messages)
+    update_topics(rest, tick, time_diff, messages)
   end
 
-  defp update_topic(topic, topic_state, time_diff, player_inputs) do
-    # TODO: only update all periodically rather than every tick
-    updates = NativePhysics.tick(player_inputs, false)
+  defp update_topic(topic, topic_state, tick, time_diff, player_inputs) do
+    # TODO: rather than reversing player inputs here, just push them to the front of the buffer
+    update_all = rem(tick, 3) == 0 # Send full snapshot every 3 ticks ~(50ms)
+    updates = NativePhysics.tick(player_inputs |> Enum.reverse, update_all)
     if is_list(updates) do
       payload = updates
         |> Enum.map(&handle_update/1)
         |> Enum.filter(& !is_nil(&1))
-      BackendWeb.Endpoint.broadcast! topic, "tick", %{response: payload}
+
+      if Enum.count(payload) > 0 do
+        BackendWeb.Endpoint.broadcast! topic, "tick", %{response: payload}
+      end
     else
       IO.inspect(["PHYSICS ENGINE ERROR", player_inputs, updates])
     end
