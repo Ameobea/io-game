@@ -1,6 +1,7 @@
 use std::mem;
 
 use nalgebra::{Isometry2, Vector2};
+use native_physics::physics::Movement;
 use nphysics2d::algebra::Velocity2;
 use protobuf::{parse_from_bytes, Message};
 use uuid::Uuid;
@@ -9,7 +10,7 @@ use conf::CONF;
 use phoenix_proto::send_channel_message;
 use protos::channel_messages::Event;
 use protos::client_messages::{ClientMessage, ClientMessage_oneof_payload as ClientMessageContent};
-use protos::message_common::Uuid as ProtoUuid;
+use protos::message_common::{MovementDirection, Uuid as ProtoUuid};
 pub use protos::server_messages::ServerMessage_Payload_oneof_payload as ServerMessageContent;
 use protos::server_messages::{
     MovementUpdate, ServerMessage, ServerMessage_Payload as ServerMessagePayload,
@@ -77,6 +78,22 @@ impl<'a> Into<(Isometry2<f32>, Velocity2<f32>)> for &'a MovementUpdate {
         );
 
         (pos, velocity)
+    }
+}
+
+impl Into<Movement> for MovementDirection {
+    fn into(self) -> Movement {
+        match self {
+            MovementDirection::DOWN => Movement::Down,
+            MovementDirection::DOWN_LEFT => Movement::DownLeft,
+            MovementDirection::DOWN_RIGHT => Movement::DownRight,
+            MovementDirection::LEFT => Movement::Left,
+            MovementDirection::RIGHT => Movement::Right,
+            MovementDirection::STOP => Movement::Stop,
+            MovementDirection::UP => Movement::Up,
+            MovementDirection::UP_LEFT => Movement::UpLeft,
+            MovementDirection::UP_RIGHT => Movement::UpRight,
+        }
     }
 }
 

@@ -11,7 +11,7 @@ config_loader = { path = "../../config_loader" }
 [dependencies]
 lazy_static = "1.0.2"
 nalgebra = "0.16.0"
-ncollide2d = "0.17.0"
+ncollide2d = { git = "https://github.com/Ameobea/ncollide.git", rev = "collision-world-public" }
 noise = "0.5.1"
 protobuf = "2.0.4"
 physics = { path = "../../physics", default-features = false }

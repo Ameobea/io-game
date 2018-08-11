@@ -10,8 +10,9 @@ pub mod world;
 
 pub use self::world::PhysicsWorldInner;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Movement {
+    Stop,
     Up,
     UpRight,
     Right,
@@ -20,7 +21,12 @@ pub enum Movement {
     DownLeft,
     Left,
     UpLeft,
-    Stop,
+}
+
+impl Default for Movement {
+    fn default() -> Self {
+        Movement::Stop
+    }
 }
 
 impl Into<Vector2<f32>> for Movement {

@@ -4,7 +4,7 @@ use nalgebra::Point2;
 use wasm_bindgen::prelude::*;
 
 use game::effects::DemoCircle;
-use game_state::{get_cur_held_keys, get_effects_manager, player_entity_fastpath};
+use game_state::{get_cur_held_keys, get_effects_manager, get_state};
 use proto_utils::send_user_message;
 use protos::client_messages::{BeamAim, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::MovementDirection as Direction;
@@ -22,7 +22,7 @@ pub fn handle_mouse_down(x: u16, y: u16) {
     };
     get_effects_manager().add_effect(box effect);
 
-    player_entity_fastpath().set_beam_active(true);
+    get_state().get_player_entity_mut().0.beam_on = true;
 
     // Send a "beam on" message to the server
     let payload = ClientMessageContent::beam_toggle(true);
@@ -32,7 +32,7 @@ pub fn handle_mouse_down(x: u16, y: u16) {
 #[wasm_bindgen]
 pub fn handle_mouse_move(x: f32, y: f32) {
     // Update the beam direction locally
-    player_entity_fastpath().update_beam(Point2::new(x, y));
+    get_state().get_player_entity_mut().0.beam_aim = Point2::new(x, y);
 
     // Send a beam direction update message to the server
     let mut aim = BeamAim::new();
@@ -44,7 +44,7 @@ pub fn handle_mouse_move(x: f32, y: f32) {
 
 #[wasm_bindgen]
 pub fn handle_mouse_up(_x: u16, _y: u16) {
-    player_entity_fastpath().set_beam_active(false);
+    get_state().get_player_entity_mut().0.beam_on = false;
 
     // Send a "beam off" message to the server
     let payload = ClientMessageContent::beam_toggle(false);
@@ -124,7 +124,7 @@ fn process_movement_update(code: usize, down: bool) {
         send_movement_msg(new_direction);
 
         // Update direction input directly on the local player entity
-        player_entity_fastpath().direction_input = new_direction;
+        get_state().get_player_entity_mut().0.movement = new_direction.into();
     }
 }
 

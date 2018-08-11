@@ -7,13 +7,7 @@ use nphysics2d::algebra::Velocity2;
 use rand::{thread_rng, Rng};
 
 // use conf::CONF;
-use physics::entities::EntityType;
-
-pub struct EntitySpawn {
-    pub isometry: Isometry2<f32>,
-    pub entity: EntityType,
-    pub velocity: Velocity2<f32>,
-}
+use physics::entities::{AsteroidEntity, Entity, EntitySpawn};
 
 #[inline(always)]
 fn pt2(x: f32, y: f32) -> Point2<f32> {
@@ -46,13 +40,14 @@ fn create_asteroid() -> EntitySpawn {
             ),
             rng.gen_range(0., 2.0 * PI),
         ),
-        entity: EntityType::Asteroid {
+        entity: Entity::Asteroid(AsteroidEntity {
             vertices: get_asteroid_vertices(),
-        },
+        }),
         velocity: Velocity2::new(
             Vector2::new(rng.gen_range(0.0, 0.05), rng.gen_range(0.0, 0.05)),
             rng.gen_range(-0.025, 0.025),
         ),
+        data: (),
     }
 }
 

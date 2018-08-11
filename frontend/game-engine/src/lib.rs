@@ -35,9 +35,7 @@ pub mod render_methods;
 pub mod user_input;
 pub mod util;
 
-use game_state::{
-    get_effects_manager, get_state, player_entity_fastpath, GameState, EFFECTS_MANAGER, STATE,
-};
+use game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
 use phoenix_proto::{join_game_channel, send_connect_message};
 use proto_utils::parse_server_message;
 
@@ -117,7 +115,15 @@ pub fn handle_message(bytes: &[u8]) {
 
 #[wasm_bindgen]
 pub fn tick() {
-    let player_pos = player_entity_fastpath().pos();
+    let player_body_handle = get_state().get_player_entity_handles().body_handle;
+    let player_pos = get_state()
+        .world
+        .world
+        .rigid_body(player_body_handle)
+        .unwrap()
+        .position()
+        .translation
+        .vector;
     draw_background(player_pos.x, player_pos.y, 1500, 1500);
 
     let cur_tick = get_state().tick();

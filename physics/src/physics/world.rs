@@ -5,18 +5,17 @@ use std::usize;
 
 use nalgebra::{Isometry2, Vector2};
 use nphysics2d::algebra::Velocity2;
-use nphysics2d::object::{BodyHandle, ColliderHandle, Material, RigidBody, SensorHandle};
+use nphysics2d::object::{BodyHandle, ColliderHandle, Material, RigidBody};
 use nphysics2d::solver::SignoriniModel;
 use nphysics2d::volumetric::Volumetric;
 use nphysics2d::world::World;
 use uuid::Uuid;
 
-use super::entities::EntityType;
+use super::entities::{Entity, EntityHandles, EntitySpawn, PlayerEntity};
 use super::Movement;
-use worldgen::{get_initial_entities, EntitySpawn};
+use worldgen::get_initial_entities;
 
 pub const COLLIDER_MARGIN: f32 = CONF.physics.collider_margin;
-pub const DEFAULT_PLAYER_SIZE: f32 = CONF.game.default_player_size;
 const WORLD_MISSING_ERR: &'static str = "Entity in UUID map but not the world!";
 
 #[cfg(feature = "elixir-interop")]
@@ -45,51 +44,41 @@ mod cond {
 
 use self::cond::*;
 
-pub struct EntityHandles {
-    pub collider_handle: ColliderHandle,
-    pub body_handle: BodyHandle,
-    pub beam_handle: Option<SensorHandle>,
-}
-
-pub struct PhysicsWorldInner {
+pub struct PhysicsWorldInner<T = ()> {
     /// Maps UUIDs to internal physics entity handles
-    pub uuid_map: BTreeMap<EntityKey, EntityHandles>,
+    pub uuid_map: BTreeMap<EntityKey, EntityHandles<T>>,
     /// Maps `ColliderHandle`s to UUIDs
-    pub handle_map: BTreeMap<ColliderHandle, (EntityKey, EntityType)>,
+    pub handle_map: BTreeMap<ColliderHandle, EntityKey>,
+    /// The inner physics world that contains all of the entities' geometry and physics data
     pub world: World<f32>,
-    pub user_handles: Vec<(BodyHandle, ColliderHandle)>,
+    /// A list containing handles to all player entities, used to apply movement and friction
+    pub user_handles: Vec<(BodyHandle, EntityKey)>,
     /// Maps the collider handles of beam sensors to the User entities that own them
     pub beam_sensors: BTreeMap<ColliderHandle, EntityKey>,
 }
 
-impl PhysicsWorldInner {
-    pub fn new() -> Self {
-        let mut world = World::new();
-        world.set_contact_model(SignoriniModel::new());
-        world.set_timestep(CONF.physics.engine_time_step);
-
-        let mut uuid_map = BTreeMap::new();
-        let mut handle_map = BTreeMap::new();
-
+impl PhysicsWorldInner<()> {
+    pub fn initialize(&mut self) {
         // Populate the world with initial entities
         for EntitySpawn {
             isometry,
             velocity,
             entity,
+            data,
         } in get_initial_entities()
         {
             let shape_handle = entity.get_shape_handle();
             let inertia = shape_handle.inertia(entity.get_density());
             let center_of_mass = shape_handle.center_of_mass();
-            let body_handle = world.add_rigid_body(isometry, inertia, center_of_mass);
+            let body_handle = self.world.add_rigid_body(isometry, inertia, center_of_mass);
             {
-                world
+                self.world
                     .rigid_body_mut(body_handle)
                     .unwrap()
                     .set_velocity(velocity);
             }
 
-            let collider_handle = world.add_collider(
+            let collider_handle = self.world.add_collider(
                 COLLIDER_MARGIN,
                 shape_handle,
                 body_handle,
@@ -102,14 +91,24 @@ impl PhysicsWorldInner {
                 collider_handle,
                 body_handle,
                 beam_handle: None,
+                entity,
+                data,
             };
-            uuid_map.insert(uuid_to_key(uuid), handles);
-            handle_map.insert(collider_handle, (uuid_to_key(uuid), entity));
+            self.uuid_map.insert(uuid_to_key(uuid), handles);
+            self.handle_map.insert(collider_handle, uuid_to_key(uuid));
         }
+    }
+}
+
+impl<T> PhysicsWorldInner<T> {
+    pub fn new() -> Self {
+        let mut world = World::new();
+        world.set_contact_model(SignoriniModel::new());
+        world.set_timestep(CONF.physics.engine_time_step);
 
         PhysicsWorldInner {
-            uuid_map,
-            handle_map,
+            uuid_map: BTreeMap::new(),
+            handle_map: BTreeMap::new(),
             world,
             user_handles: Vec::new(),
             beam_sensors: BTreeMap::new(),
@@ -119,18 +118,18 @@ impl PhysicsWorldInner {
     /// Apply movement updates to all user entities based on their input and apply friction.  Then,
     /// step the underlying physics world for one tick of the simulation.
     pub fn step(&mut self) {
-        for (user_body_handle, user_collider_handle) in &self.user_handles {
+        for (user_body_handle, uuid) in &self.user_handles {
             let user_rigid_body: &mut RigidBody<f32> = self
                 .world
                 .rigid_body_mut(*user_body_handle)
                 .expect("ERROR: Player wasn't a rigid body!");
 
-            let (_uuid, user_data) = self
-                .handle_map
-                .get(user_collider_handle)
-                .expect("User collider handle isn't in the `handle_map`!");
-            let movement: Movement = match user_data {
-                EntityType::Player { movement, .. } => (*movement),
+            let EntityHandles { entity, .. } = self
+                .uuid_map
+                .get(uuid)
+                .expect("UUID in `user_handles` not in `uuid_map`");
+            let movement: Movement = match entity {
+                Entity::Player(PlayerEntity { movement, .. }) => (*movement),
                 _ => panic!("Expected a player entity but the entity data wasn't one!"),
             };
 
@@ -144,8 +143,7 @@ impl PhysicsWorldInner {
             let velocity = *user_rigid_body.velocity();
             let mut movement_force: Vector2<f32> = movement.into();
             movement_force *= CONF.physics.acceleration_per_tick;
-            let mut new_velocity =
-                Velocity2::new(velocity.linear + movement_force, velocity.angular);
+            let new_velocity = Velocity2::new(velocity.linear + movement_force, velocity.angular);
 
             // Apply friction
             let friction_adjusted_new_velocity = new_velocity;
@@ -157,7 +155,7 @@ impl PhysicsWorldInner {
         self.world.step();
     }
 
-    pub fn spawn_entity(&mut self, entity_id: EntityKey, entity: EntitySpawn) {
+    pub fn spawn_entity(&mut self, entity_id: EntityKey, entity_data: EntitySpawn<T>) {
         // TODO
         unimplemented!();
     }
@@ -168,6 +166,7 @@ impl PhysicsWorldInner {
             collider_handle,
             body_handle,
             beam_handle,
+            ..
         } = match self.uuid_map.remove(entity_id) {
             Some(handles) => handles,
             None => {
@@ -181,8 +180,8 @@ impl PhysicsWorldInner {
         self.world.remove_bodies(&[body_handle]);
         // TODO: Possibly convert this to a map
         let mut pos = usize::max_value();
-        for (i, entry) in self.user_handles.iter().enumerate() {
-            if *entry == (body_handle, collider_handle) {
+        for (i, (candidate_body_handle, uuid)) in self.user_handles.iter().enumerate() {
+            if (candidate_body_handle, uuid) == (&body_handle, entity_id) {
                 pos = i;
                 break;
             }
@@ -238,5 +237,30 @@ impl PhysicsWorldInner {
             .collision_object_mut(*collider_handle)
             .expect(WORLD_MISSING_ERR);
         collider.set_position(*pos);
+    }
+
+    /// Removes all entities from this world
+    pub fn clear(&mut self) {
+        for (
+            _,
+            EntityHandles {
+                collider_handle,
+                body_handle,
+                beam_handle,
+                ..
+            },
+        ) in self.uuid_map.iter()
+        {
+            self.world.remove_colliders(&[*collider_handle]);
+            self.world.remove_bodies(&[*body_handle]);
+            if let Some(beam_handle) = beam_handle {
+                self.world.remove_colliders(&[*beam_handle]);
+            }
+        }
+
+        self.uuid_map.clear();
+        self.handle_map.clear();
+        self.user_handles.clear();
+        self.beam_sensors.clear();
     }
 }

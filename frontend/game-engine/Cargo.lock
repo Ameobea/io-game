@@ -164,7 +164,7 @@ dependencies = [
  "lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libcomposition 0.1.0 (git+https://github.com/Ameobea/noise-asmjs.git?rev=noise2d)",
  "nalgebra 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ncollide2d 0.17.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ncollide2d 0.17.1 (git+https://github.com/Ameobea/ncollide.git?rev=collision-world-public)",
  "noise 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "nphysics2d 0.9.0 (git+https://github.com/Ameobea/nphysics.git)",
  "physics 0.1.0",
@@ -337,7 +337,7 @@ dependencies = [
 [[package]]
 name = "ncollide2d"
 version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/Ameobea/ncollide.git?rev=collision-world-public#f8885c562cbc4b2bf83647687e051debc43ce33a"
 dependencies = [
  "alga 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "approx 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -365,13 +365,13 @@ dependencies = [
 [[package]]
 name = "nphysics2d"
 version = "0.9.0"
-source = "git+https://github.com/Ameobea/nphysics.git#3f881965b83a09d0b0e989607879055875dc58ae"
+source = "git+https://github.com/Ameobea/nphysics.git#8639dc39d94aa9564c9d91d7cca4a35351e78325"
 dependencies = [
  "alga 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "approx 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "downcast 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ncollide2d 0.17.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ncollide2d 0.17.1 (git+https://github.com/Ameobea/ncollide.git?rev=collision-world-public)",
  "num-traits 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "slab 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -510,7 +510,7 @@ dependencies = [
  "config_loader 0.1.0",
  "lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ncollide2d 0.17.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ncollide2d 0.17.1 (git+https://github.com/Ameobea/ncollide.git?rev=collision-world-public)",
  "nphysics2d 0.9.0 (git+https://github.com/Ameobea/nphysics.git)",
  "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -936,7 +936,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum memchr 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "796fba70e76612589ed2ce7f45282f5af869e0fdd7cc6199fa1aa1f1d591ba9d"
 "checksum memoffset 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0f9dc261e2b62d7a622bf416ea3c5245cdd5d9a7fcc428c0d06804dfce1775b3"
 "checksum nalgebra 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4534bc88a178e411e634e1e44e7f2ad6e9bf062ea539f40e579bd49ef2fad056"
-"checksum ncollide2d 0.17.1 (registry+https://github.com/rust-lang/crates.io-index)" = "425882363e3630b61ec2462d0d4ad650e692bcff1bd199a8d085226a9dc0f79e"
+"checksum ncollide2d 0.17.1 (git+https://github.com/Ameobea/ncollide.git?rev=collision-world-public)" = "<none>"
 "checksum nodrop 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "9a2228dca57108069a5262f2ed8bd2e82496d2e074a06d1ccc7ce1687b6ae0a2"
 "checksum noise 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "9a3a34d4f8a31f95919b7ead9f5b60afb9bda0cae98b9219432ffaa6f00b0141"
 "checksum nphysics2d 0.9.0 (git+https://github.com/Ameobea/nphysics.git)" = "<none>"
