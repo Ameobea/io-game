@@ -3,11 +3,14 @@
 use std::hint::unreachable_unchecked;
 use std::mem;
 use std::ptr;
+use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
 
 use native_physics::physics::entities::EntityHandles;
 use native_physics::physics::world::PhysicsWorldInner as PhysicsWorld;
 use uuid::Uuid;
 
+use super::{init_input_handlers, start_game_loop};
 use entity::{apply_update, parse_proto_entity, render, tick, ClientState, Entity, PlayerEntity};
 use proto_utils::{parse_server_msg_payload, InnerServerMessage, ServerMessageContent};
 use protos::server_messages::{
@@ -21,6 +24,7 @@ use util::{error, log, warn};
 pub static mut STATE: *mut GameState = ptr::null_mut();
 pub static mut EFFECTS_MANAGER: *mut RenderEffectManager = ptr::null_mut();
 pub static mut CUR_HELD_KEYS: *mut CurHeldKeys = ptr::null_mut();
+pub static GAME_LOOP_STARTED: AtomicBool = ATOMIC_BOOL_INIT; // false
 
 #[inline(always)]
 pub fn get_state() -> &'static mut GameState {
@@ -79,16 +83,24 @@ impl GameState {
                 }
                 None => warn("Received `StatusUpdate` with no payload"),
             },
-            ServerMessageContent::snapshot(snapshot) => self.apply_snapshot(snapshot),
-            ServerMessageContent::connect_successful(_player_id) => (), // TODO
-            _ => {
-                if let ServerMessageContent::movement_update(ref movement_update) = update {
-                    let (pos, velocity) = movement_update.into();
-                    // Update the entity's position and velocity on the underlying `PhysicsWorld`
-                    self.world.update_movement(&entity_id, &pos, &velocity);
-                    return;
-                }
+            ServerMessageContent::snapshot(snapshot) => {
+                self.apply_snapshot(snapshot);
 
+                // It's possible this is the first snapshot, so start listening for mouse/keyoard
+                // events now that we have a user entity in the snapshot.
+                init_input_handlers();
+            }
+            ServerMessageContent::connect_successful(player_id) => {
+                let player_id: Uuid = player_id.into();
+                log(format!("Setting player ID: {}", player_id));
+                self.player_uuid = player_id;
+            }
+            ServerMessageContent::movement_update(ref movement_update) => {
+                let (pos, velocity) = movement_update.into();
+                // Update the entity's position and velocity on the underlying `PhysicsWorld`
+                self.world.update_movement(&entity_id, &pos, &velocity);
+            }
+            _ => {
                 let EntityHandles {
                     ref mut entity,
                     data: ref mut client_state,
@@ -127,6 +139,8 @@ impl GameState {
     /// without taking input from the server.  This method iterates over all entities and
     /// optionally performs this mutation before rendering.  Returns the current tick.
     pub fn tick(&mut self) -> usize {
+        self.world.step();
+
         for (
             _,
             EntityHandles {
@@ -153,6 +167,7 @@ impl GameState {
 
     /// Creates an `Entity` from a `CreationEvent` and spawns it into the world
     pub fn create_entity(&mut self, entity_id: Uuid, creation_evt: &CreationEvent) {
+        log(format!("Creating entity with id {}", entity_id));
         let entity_data = match parse_proto_entity(creation_evt) {
             Some(entity) => entity,
             None => {
@@ -162,6 +177,15 @@ impl GameState {
         };
 
         self.world.spawn_entity(entity_id, entity_data);
+
+        if entity_id == self.player_uuid {
+            // Start the game loop if it's not yet been started
+            let game_loop_started = GAME_LOOP_STARTED.load(Ordering::Relaxed);
+            if !game_loop_started {
+                GAME_LOOP_STARTED.store(false, Ordering::Relaxed);
+                start_game_loop();
+            }
+        }
     }
 
     pub fn get_player_entity(&self) -> (&PlayerEntity, &ClientState) {
@@ -188,7 +212,10 @@ impl GameState {
             .world
             .uuid_map
             .get_mut(&self.player_uuid)
-            .expect("Player entity ID not in `uuid_map`");
+            .expect(&format!(
+                "Player entity ID {} not in `uuid_map` (`get_player_entity_mut`)",
+                self.player_uuid,
+            ));
 
         let player = match entity {
             Entity::Player(player) => player,
@@ -199,9 +226,9 @@ impl GameState {
     }
 
     pub fn get_player_entity_handles(&self) -> &EntityHandles<ClientState> {
-        self.world
-            .uuid_map
-            .get(&self.player_uuid)
-            .expect("Player entity ID not in `uuid_map`")
+        self.world.uuid_map.get(&self.player_uuid).expect(&format!(
+            "Player entity ID {} not in `uuid_map` (`get_player_entity_handles`)",
+            self.player_uuid,
+        ))
     }
 }

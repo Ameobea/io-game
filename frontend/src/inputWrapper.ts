@@ -3,9 +3,7 @@
  */
 
 import { getCanvas } from './renderMethods';
-import { continueInit, handleWsMsg } from './index';
-
-const canvas = getCanvas('canvas-2d');
+import { continueInit, handleWsMsg, getEngine } from './index';
 
 const gameSocket = new WebSocket('ws://localhost:4000/socket/websocket?vsn=1.0.0');
 
@@ -27,7 +25,8 @@ gameSocket.onopen = () => continueInit();
 
 const body = document.getElementsByTagName('body')[0];
 
-export const initEventHandlers = (engine: typeof import('./game_engine')) => {
+export const init_input_handlers = () => {
+  const engine = getEngine();
   body.onmousedown = evt => engine.handle_mouse_down(evt.x, evt.y);
   body.onmouseup = evt => engine.handle_mouse_up(evt.x, evt.y);
   body.onmousemove = evt => engine.handle_mouse_move(evt.x, evt.y);

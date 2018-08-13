@@ -139,5 +139,5 @@ pub fn send_user_message(payload: ClientMessageContent) {
 
     let mut event = Event::new();
     event.set_custom_event(CONF.network.custom_event_name.into());
-    send_channel_message(CONF.network.game_channel_name, event, Some(client_msg));
+    send_channel_message(event, Some(client_msg));
 }

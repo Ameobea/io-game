@@ -88,17 +88,18 @@ impl PhysicsWorld {
                         match beam_handle {
                             Some(beam_handle) => {
                                 // Move the beam sensor
-                                let sensor = world
+                                let beam_collider = world.collider(*beam_handle).expect(
+                                    "No beam sensor in the world matching the stored handle!",
+                                );
+                                let old_pos = beam_collider.position();
+                                let pos_wrt_body = *beam_collider.data().position_wrt_body();
+                                let new_pos =
+                                    pos_wrt_body
+                                        * Isometry2::new(old_pos.translation.vector, rotation);
+
+                                world
                                     .collision_world_mut()
-                                    .collision_object_mut(*beam_handle)
-                                    .expect(
-                                        "No beam sensor in the world matching the stored handle!",
-                                    );
-                                let new_pos = {
-                                    let old_pos = sensor.position();
-                                    Isometry2::new(old_pos.translation.vector, rotation)
-                                };
-                                sensor.set_position(new_pos);
+                                    .set_position(*beam_handle, new_pos);
                             }
                             None => (),
                         }

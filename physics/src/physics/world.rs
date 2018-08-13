@@ -60,42 +60,8 @@ pub struct PhysicsWorldInner<T = ()> {
 impl PhysicsWorldInner<()> {
     pub fn initialize(&mut self) {
         // Populate the world with initial entities
-        for EntitySpawn {
-            isometry,
-            velocity,
-            entity,
-            data,
-        } in get_initial_entities()
-        {
-            let shape_handle = entity.get_shape_handle();
-            let inertia = shape_handle.inertia(entity.get_density());
-            let center_of_mass = shape_handle.center_of_mass();
-            let body_handle = self.world.add_rigid_body(isometry, inertia, center_of_mass);
-            {
-                self.world
-                    .rigid_body_mut(body_handle)
-                    .unwrap()
-                    .set_velocity(velocity);
-            }
-
-            let collider_handle = self.world.add_collider(
-                COLLIDER_MARGIN,
-                shape_handle,
-                body_handle,
-                Isometry2::identity(),
-                Material::default(),
-            );
-
-            let uuid = Uuid::new_v4();
-            let handles = EntityHandles {
-                collider_handle,
-                body_handle,
-                beam_handle: None,
-                entity,
-                data,
-            };
-            self.uuid_map.insert(uuid_to_key(uuid), handles);
-            self.handle_map.insert(collider_handle, uuid_to_key(uuid));
+        for entity_spawn in get_initial_entities() {
+            self.spawn_entity(Uuid::new_v4(), entity_spawn);
         }
     }
 }
@@ -136,7 +102,7 @@ impl<T> PhysicsWorldInner<T> {
             // The physics engine puts entities to sleep if their energies are low enough, causing
             // them to not be simulated.  We manually wake up the player to ensure that the changes
             // we apply to their velocities from movement directions are taken into account by the
-            // physics engine.unreachable!
+            // physics engine.
             user_rigid_body.activate();
 
             // Apply thrust force from movement input
@@ -146,7 +112,8 @@ impl<T> PhysicsWorldInner<T> {
             let new_velocity = Velocity2::new(velocity.linear + movement_force, velocity.angular);
 
             // Apply friction
-            let friction_adjusted_new_velocity = new_velocity;
+            let friction_adjusted_new_velocity =
+                new_velocity * (1.0 - CONF.physics.friction_per_tick);
 
             user_rigid_body.set_velocity(friction_adjusted_new_velocity);
         }
@@ -155,9 +122,45 @@ impl<T> PhysicsWorldInner<T> {
         self.world.step();
     }
 
-    pub fn spawn_entity(&mut self, entity_id: EntityKey, entity_data: EntitySpawn<T>) {
-        // TODO
-        unimplemented!();
+    pub fn spawn_entity(&mut self, uuid: Uuid, entity_data: EntitySpawn<T>) {
+        let EntitySpawn {
+            entity,
+            isometry,
+            velocity,
+            data,
+        } = entity_data;
+
+        let shape_handle = entity.get_shape_handle();
+        let inertia = shape_handle.inertia(entity.get_density());
+        let center_of_mass = shape_handle.center_of_mass();
+        let body_handle = self.world.add_rigid_body(isometry, inertia, center_of_mass);
+
+        self.world
+            .rigid_body_mut(body_handle)
+            .unwrap()
+            .set_velocity(velocity);
+
+        let collider_handle = self.world.add_collider(
+            COLLIDER_MARGIN,
+            shape_handle,
+            body_handle,
+            Isometry2::identity(),
+            Material::default(),
+        );
+
+        if let Entity::Player(_) = entity {
+            self.user_handles.push((body_handle, uuid_to_key(uuid)));
+        }
+
+        let handles = EntityHandles {
+            collider_handle,
+            body_handle,
+            beam_handle: None,
+            entity,
+            data,
+        };
+        self.uuid_map.insert(uuid_to_key(uuid), handles);
+        self.handle_map.insert(collider_handle, uuid_to_key(uuid));
     }
 
     /// Removes an entity from both the physics world as well as all maps.
@@ -197,9 +200,24 @@ impl<T> PhysicsWorldInner<T> {
     }
 
     /// Sets the movement input for a player
-    pub fn set_player_movement(&mut self, user_id: &EntityKey) {
-        // TODO
-        unimplemented!()
+    pub fn set_player_movement(&mut self, user_id: &EntityKey, new_movement: Movement) {
+        let EntityHandles { entity, .. } = match self.uuid_map.get_mut(user_id) {
+            Some(handles) => handles,
+            None => {
+                println!(
+                    "Attempted to set movement of entity id {} but it's not in the UUID map",
+                    user_id
+                );
+                return;
+            }
+        };
+
+        match entity {
+            Entity::Player(PlayerEntity {
+                ref mut movement, ..
+            }) => *movement = new_movement,
+            _ => panic!("Tried to set movement for non-player entity: {:?}", entity),
+        }
     }
 
     /// Updates the position, movement, and physics dynamics for an entity in the world
@@ -230,13 +248,17 @@ impl<T> PhysicsWorldInner<T> {
             .expect(WORLD_MISSING_ERR);
         rigid_body.set_velocity(*velocity);
 
-        // Set the position of the attached `CollisionObject`
         let collider = self
             .world
             .collision_world_mut()
             .collision_object_mut(*collider_handle)
-            .expect(WORLD_MISSING_ERR);
-        collider.set_position(*pos);
+            .expect("ERROR: `collider_handle` in `uuid_map` but not the world");
+        let pos_wrt_body = *collider.data().position_wrt_body();
+
+        // Set the position of the attached `CollisionObject`
+        self.world
+            .collision_world_mut()
+            .set_position(*collider_handle, pos_wrt_body * *pos);
     }
 
     /// Removes all entities from this world

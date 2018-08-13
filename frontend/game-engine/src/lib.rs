@@ -20,6 +20,7 @@ extern crate wasm_bindgen;
 
 use std::panic;
 
+use nalgebra::Vector2;
 use wasm_bindgen::prelude::*;
 
 pub mod conf;
@@ -38,13 +39,18 @@ pub mod util;
 use game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
 use phoenix_proto::{join_game_channel, send_connect_message};
 use proto_utils::parse_server_message;
-
 use render_effects::RenderEffectManager;
 use util::error;
+
+#[wasm_bindgen(module = "./index")]
+extern "C" {
+    pub fn start_game_loop();
+}
 
 #[wasm_bindgen(module = "./inputWrapper")]
 extern "C" {
     pub fn send_message(msg: Vec<u8>);
+    pub fn init_input_handlers();
 }
 
 #[wasm_bindgen(module = "./webgl")]
@@ -120,10 +126,9 @@ pub fn tick() {
         .world
         .world
         .rigid_body(player_body_handle)
-        .unwrap()
-        .position()
-        .translation
-        .vector;
+        .as_ref()
+        .map(|rigid_body| rigid_body.position().translation.vector)
+        .unwrap_or_else(Vector2::zeros);
     draw_background(player_pos.x, player_pos.y, 1500, 1500);
 
     let cur_tick = get_state().tick();

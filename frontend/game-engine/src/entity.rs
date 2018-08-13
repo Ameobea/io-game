@@ -13,7 +13,7 @@ use physics_math::ray_collision;
 use proto_utils::ServerMessageContent;
 use protos::server_messages::{CreationEvent, CreationEvent_oneof_entity as ProtoEntity};
 use render_methods::{fill_poly, render_line};
-use util::{error, Color};
+use util::{error, warn, Color};
 
 /// An optional piece of client-local state attached to an entity for things such as visual
 /// appearance and transitive state not transmitted authoritatively by the server.
@@ -33,7 +33,7 @@ pub fn apply_update(
     _client_state: &mut ClientState,
     _update: &ServerMessageContent,
 ) {
-    // TODO
+    warn("Unhandled update");
 }
 
 pub fn tick(_entity: &mut Entity, _client_state: &mut ClientState, _cur_tick: usize) {}
@@ -93,7 +93,7 @@ fn render_player(player: &PlayerEntity, pos: &Isometry2<f32>, color: &Color, cur
     fill_poly(color, &transformed);
 
     let beam_gun_len: f32 = 25.;
-    let beam_rotation = (pos.translation.vector - Vector2::new(beam_aim.x, beam_aim.y)).normalize();
+    let beam_rotation = (Vector2::new(beam_aim.x, beam_aim.y) - pos.translation.vector).normalize();
     let beam_vec = beam_rotation * beam_gun_len;
     let beam_gun_start_point = Point2::new(pos.translation.vector.x, pos.translation.vector.y);
     let beam_gun_endpoint = beam_gun_start_point + beam_vec;

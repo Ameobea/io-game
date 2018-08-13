@@ -20,13 +20,9 @@ fn inc_ref() -> usize {
     old_ref
 }
 
-pub fn send_channel_message<S: Into<String>>(
-    topic: S,
-    event: Event,
-    payload: Option<ClientMessage>,
-) {
+pub fn send_channel_message(event: Event, payload: Option<ClientMessage>) {
     let mut msg = ClientChannelMessage::new();
-    msg.set_topic(topic.into());
+    msg.set_topic(CONF.network.game_channel_name.into());
     msg.set_event(event);
     if let Some(payload) = payload {
         msg.set_payload(payload);
@@ -50,13 +46,13 @@ pub fn send_connect_message() {
     let mut evt = Event::new();
     evt.set_custom_event("game".into());
 
-    send_channel_message(CONF.network.game_channel_name, evt, Some(connect_msg))
+    send_channel_message(evt, Some(connect_msg))
 }
 
 pub fn join_game_channel() {
     let mut evt = Event::new();
     evt.set_phoenix_event(PhoenixEvent::Join);
-    send_channel_message(CONF.network.game_channel_name, evt, None);
+    send_channel_message(evt, None);
 }
 
 fn warn_msg(msg_type: &str, topic: &str) {
