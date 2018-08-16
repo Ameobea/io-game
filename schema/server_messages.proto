@@ -7,18 +7,21 @@ message PlayerEntity {
 }
 
 message AsteroidEntity {
-  repeated float vert_coords = 5; // List of vertices as [x1, y1, x2, y2, ...]
+  repeated float vert_coords = 1; // List of vertices as [x1, y1, x2, y2, ...]
+}
+
+message BarrierEntity {
+  repeated float vert_coords = 1;
 }
 
 message CreationEvent {
   MovementUpdate movement = 1;
   // The center of mass is the point around which the entity rotates.  This is different from the
   // entity's origin unless especially adjusted for.
-  float center_of_mass_x = 2;
-  float center_of_mass_y = 3;
   oneof entity {
-    PlayerEntity player = 4;
-    AsteroidEntity asteroid = 5;
+    PlayerEntity player = 2;
+    AsteroidEntity asteroid = 3;
+    BarrierEntity barrier = 4;
   }
 }
 

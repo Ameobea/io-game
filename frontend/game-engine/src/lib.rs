@@ -1,9 +1,6 @@
 #![feature(
     box_syntax,
     use_extern_macros,
-    wasm_custom_section,
-    wasm_import_module,
-    u128_type,
     trivial_bounds,
     nll,
 )]

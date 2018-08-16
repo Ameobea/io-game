@@ -1,0 +1,7 @@
+frontend/dist
+backend/deps
+physics/target
+frontend/game-engine/target
+Dockerfile
+frontend/node_modules
+config_loader/target

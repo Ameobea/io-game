@@ -1,5 +1,5 @@
 {
-  "accelerationPerTick": 0.475,
+  "accelerationPerTick": 0.175,
   "maxPlayerSpeed": 5.0,
   "frictionPerTick": 0.05,
   "colliderMargin": 0.01,

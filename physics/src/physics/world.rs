@@ -5,8 +5,9 @@ use std::usize;
 
 use nalgebra::{Isometry2, Vector2};
 use nphysics2d::algebra::Velocity2;
-use nphysics2d::object::{BodyHandle, ColliderHandle, Material, RigidBody};
-use nphysics2d::solver::SignoriniModel;
+use nphysics2d::force_generator::{ForceGenerator, ForceGeneratorHandle};
+use nphysics2d::object::{BodyHandle, BodySet, ColliderHandle, Material, RigidBody};
+use nphysics2d::solver::{IntegrationParameters, SignoriniModel};
 use nphysics2d::volumetric::Volumetric;
 use nphysics2d::world::World;
 use uuid::Uuid;
@@ -52,7 +53,7 @@ pub struct PhysicsWorldInner<T = ()> {
     /// The inner physics world that contains all of the entities' geometry and physics data
     pub world: World<f32>,
     /// A list containing handles to all player entities, used to apply movement and friction
-    pub user_handles: Vec<(BodyHandle, EntityKey)>,
+    pub user_handles: Vec<(BodyHandle, EntityKey, ForceGeneratorHandle)>,
     /// Maps the collider handles of beam sensors to the User entities that own them
     pub beam_sensors: BTreeMap<ColliderHandle, EntityKey>,
 }
@@ -63,6 +64,33 @@ impl PhysicsWorldInner<()> {
         for entity_spawn in get_initial_entities() {
             self.spawn_entity(Uuid::new_v4(), entity_spawn);
         }
+    }
+}
+
+pub struct PlayerMovementForceGenerator {
+    movement: Movement,
+    player_body_handle: BodyHandle,
+}
+
+impl PlayerMovementForceGenerator {
+    pub fn new(player_body_handle: BodyHandle, movement: Movement) -> Self {
+        PlayerMovementForceGenerator {
+            movement,
+            player_body_handle,
+        }
+    }
+}
+
+impl ForceGenerator<f32> for PlayerMovementForceGenerator {
+    fn apply(&mut self, _: &IntegrationParameters<f32>, bodies: &mut BodySet<f32>) -> bool {
+        let mut acceleration: Vector2<f32> = self.movement.into();
+        acceleration *= CONF.physics.acceleration_per_tick;
+        let acceleration = Velocity2::new(acceleration, 0.0);
+        let mut part = bodies.body_part_mut(self.player_body_handle);
+        let force = part.as_ref().inertia() * acceleration;
+        part.apply_force(&force);
+
+        true
     }
 }
 
@@ -84,12 +112,7 @@ impl<T> PhysicsWorldInner<T> {
     /// Apply movement updates to all user entities based on their input and apply friction.  Then,
     /// step the underlying physics world for one tick of the simulation.
     pub fn step(&mut self) {
-        for (user_body_handle, uuid) in &self.user_handles {
-            let user_rigid_body: &mut RigidBody<f32> = self
-                .world
-                .rigid_body_mut(*user_body_handle)
-                .expect("ERROR: Player wasn't a rigid body!");
-
+        for (user_body_handle, uuid, force_gen_handle) in &mut self.user_handles {
             let EntityHandles { entity, .. } = self
                 .uuid_map
                 .get(uuid)
@@ -99,23 +122,23 @@ impl<T> PhysicsWorldInner<T> {
                 _ => panic!("Expected a player entity but the entity data wasn't one!"),
             };
 
+            let user_rigid_body: &mut RigidBody<f32> = self
+                .world
+                .rigid_body_mut(*user_body_handle)
+                .expect("ERROR: Player wasn't a rigid body!");
+
             // The physics engine puts entities to sleep if their energies are low enough, causing
             // them to not be simulated.  We manually wake up the player to ensure that the changes
             // we apply to their velocities from movement directions are taken into account by the
             // physics engine.
             user_rigid_body.activate();
 
-            // Apply thrust force from movement input
-            let velocity = *user_rigid_body.velocity();
-            let mut movement_force: Vector2<f32> = movement.into();
-            movement_force *= CONF.physics.acceleration_per_tick;
-            let new_velocity = Velocity2::new(velocity.linear + movement_force, velocity.angular);
+            self.world.remove_force_generator(*force_gen_handle);
+            let new_force_gen = PlayerMovementForceGenerator::new(*user_body_handle, movement);
+            let new_force_gen_handle = self.world.add_force_generator(new_force_gen);
+            *force_gen_handle = new_force_gen_handle;
 
-            // Apply friction
-            let friction_adjusted_new_velocity =
-                new_velocity * (1.0 - CONF.physics.friction_per_tick);
-
-            user_rigid_body.set_velocity(friction_adjusted_new_velocity);
+            // user_rigid_body.set_velocity(friction_adjusted_new_velocity);
         }
 
         // Step the physics simulation
@@ -128,6 +151,7 @@ impl<T> PhysicsWorldInner<T> {
             isometry,
             velocity,
             data,
+            body_status,
         } = entity_data;
 
         let shape_handle = entity.get_shape_handle();
@@ -135,10 +159,9 @@ impl<T> PhysicsWorldInner<T> {
         let center_of_mass = shape_handle.center_of_mass();
         let body_handle = self.world.add_rigid_body(isometry, inertia, center_of_mass);
 
-        self.world
-            .rigid_body_mut(body_handle)
-            .unwrap()
-            .set_velocity(velocity);
+        let body = self.world.rigid_body_mut(body_handle).unwrap();
+        body.set_velocity(velocity);
+        body.set_status(body_status);
 
         let collider_handle = self.world.add_collider(
             COLLIDER_MARGIN,
@@ -149,7 +172,10 @@ impl<T> PhysicsWorldInner<T> {
         );
 
         if let Entity::Player(_) = entity {
-            self.user_handles.push((body_handle, uuid_to_key(uuid)));
+            let force_generator = PlayerMovementForceGenerator::new(body_handle, Movement::Stop);
+            let force_gen_handle = self.world.add_force_generator(force_generator);
+            self.user_handles
+                .push((body_handle, uuid_to_key(uuid), force_gen_handle));
         }
 
         let handles = EntityHandles {
@@ -183,7 +209,7 @@ impl<T> PhysicsWorldInner<T> {
         self.world.remove_bodies(&[body_handle]);
         // TODO: Possibly convert this to a map
         let mut pos = usize::max_value();
-        for (i, (candidate_body_handle, uuid)) in self.user_handles.iter().enumerate() {
+        for (i, (candidate_body_handle, uuid, _)) in self.user_handles.iter().enumerate() {
             if (candidate_body_handle, uuid) == (&body_handle, entity_id) {
                 pos = i;
                 break;
@@ -256,6 +282,7 @@ impl<T> PhysicsWorldInner<T> {
         let pos_wrt_body = *collider.data().position_wrt_body();
 
         // Set the position of the attached `CollisionObject`
+        collider.set_position(*pos);
         self.world
             .collision_world_mut()
             .set_position(*collider_handle, pos_wrt_body * *pos);

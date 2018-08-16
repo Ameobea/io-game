@@ -14,7 +14,7 @@ use super::entities::{
     create_player_shape_handle, Entity, EntityHandles, PlayerEntity, BEAM_SHAPE_HANDLE,
     DEFAULT_PLAYER_SIZE,
 };
-use super::world::{PhysicsWorldInner, COLLIDER_MARGIN};
+use super::world::{PhysicsWorldInner, PlayerMovementForceGenerator, COLLIDER_MARGIN};
 use super::Movement;
 
 pub struct PhysicsWorld(Mutex<PhysicsWorldInner>);
@@ -432,6 +432,10 @@ pub fn spawn_user(uuid: String) -> (f32, f32, MovementUpdate) {
             Isometry2::identity(),
         );
 
+        // Create a force generator for the user's movement input
+        let force_gen = PlayerMovementForceGenerator::new(body_handle, Movement::Stop);
+        let force_gen_handle = world.add_force_generator(force_gen);
+
         // Insert an entry into the UUID map for the created player's internal handles
         let handles = EntityHandles {
             collider_handle,
@@ -445,7 +449,7 @@ pub fn spawn_user(uuid: String) -> (f32, f32, MovementUpdate) {
         handle_map.insert(collider_handle, uuid.clone());
         beam_sensors.insert(beam_handle, uuid.clone());
         // Add the handle to the `user_handles` cache
-        user_handles.push((body_handle, uuid));
+        user_handles.push((body_handle, uuid, force_gen_handle));
 
         world.rigid_body(body_handle).unwrap().center_of_mass()
     });

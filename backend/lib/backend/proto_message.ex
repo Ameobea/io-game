@@ -12,6 +12,7 @@ defmodule Backend.ProtoMessage do
     CreationEvent,
     PlayerEntity,
     AsteroidEntity,
+    BarrierEntity,
     ServerMessage.Payload,
   }
   alias NativePhysics
@@ -19,7 +20,8 @@ defmodule Backend.ProtoMessage do
 
   @entity_types %{
     player: PlayerEntity,
-    asteroid: AsteroidEntity
+    asteroid: AsteroidEntity,
+    barrier: BarrierEntity,
   }
 
   def encode_socket_message(%Phoenix.Socket.Message{payload: %{status: :error}} = message) do

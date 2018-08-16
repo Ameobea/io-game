@@ -2,10 +2,11 @@ use std::hint::unreachable_unchecked;
 
 use nalgebra::{Isometry2, Point2, Vector2};
 pub use native_physics::physics::entities::{
-    AsteroidEntity, Entity, EntityHandles, EntitySpawn, PlayerEntity,
+    AsteroidEntity, BarrierEntity, Entity, EntityHandles, EntitySpawn, PlayerEntity,
 };
 use ncollide2d::query::Ray;
 use nphysics2d::algebra::Velocity2;
+use nphysics2d::object::BodyStatus;
 
 use game::effects::DrillingParticles;
 use game_state::{get_effects_manager, get_state};
@@ -26,6 +27,7 @@ pub enum ClientState {
     Asteroid {
         color: Color,
     },
+    Empty,
 }
 
 pub fn apply_update(
@@ -77,6 +79,10 @@ pub fn render(entity: &Entity, client_state: &ClientState, pos: &Isometry2<f32>,
         }
         (Entity::Player(ref player), ClientState::Player { color, .. }) => {
             render_player(player, &pos, color, cur_tick)
+        }
+        (Entity::Barrier(BarrierEntity { vertices }), ClientState::Empty) => {
+            let transformed = transform_points(&vertices, pos);
+            fill_poly(&Color::new(0, 0, 0), &transformed);
         }
         _ => unmatched_state(entity, client_state),
     }
@@ -194,10 +200,18 @@ fn render_player(player: &PlayerEntity, pos: &Isometry2<f32>, color: &Color, cur
 
 fn get_vertices<'a>(entity: &'a Entity, client_state: &'a ClientState) -> &'a [Point2<f32>] {
     match (entity, client_state) {
-        (Entity::Asteroid(AsteroidEntity { vertices, .. }), _) => vertices,
+        (Entity::Asteroid(AsteroidEntity { vertices }), _)
+        | (Entity::Barrier(BarrierEntity { vertices }), _) => vertices,
         (Entity::Player(_), ClientState::Player { vertices, .. }) => vertices,
         _ => unmatched_state(entity, client_state),
     }
+}
+
+fn map_vertices(verts: &[f32]) -> Vec<Point2<f32>> {
+    verts
+        .chunks(2)
+        .map(|pts| Point2::new(pts[0], pts[1]))
+        .collect()
 }
 
 pub fn parse_proto_entity(creation_evt: &CreationEvent) -> Option<EntitySpawn<ClientState>> {
@@ -210,6 +224,8 @@ pub fn parse_proto_entity(creation_evt: &CreationEvent) -> Option<EntitySpawn<Cl
             return None;
         }
     };
+
+    let mut body_status = BodyStatus::Dynamic;
 
     let (entity, client_state) = match entity {
         ProtoEntity::player(proto_player) => {
@@ -228,15 +244,18 @@ pub fn parse_proto_entity(creation_evt: &CreationEvent) -> Option<EntitySpawn<Cl
             (entity, client_state)
         }
         ProtoEntity::asteroid(asteroid) => {
-            let vertices = asteroid
-                .get_vert_coords()
-                .chunks(2)
-                .map(|pts| Point2::new(pts[0], pts[1]))
-                .collect();
+            let vertices = map_vertices(&asteroid.get_vert_coords());
             let entity = Entity::Asteroid(AsteroidEntity { vertices });
             let client_state = ClientState::Asteroid {
                 color: Color::random(),
             };
+            (entity, client_state)
+        }
+        ProtoEntity::barrier(barrier) => {
+            let vertices = map_vertices(&barrier.get_vert_coords());
+            let entity = Entity::Barrier(BarrierEntity { vertices });
+            let client_state = ClientState::Empty;
+            body_status = BodyStatus::Static;
             (entity, client_state)
         }
     };
@@ -246,5 +265,6 @@ pub fn parse_proto_entity(creation_evt: &CreationEvent) -> Option<EntitySpawn<Cl
         isometry: pos,
         velocity,
         data: client_state,
+        body_status,
     })
 }

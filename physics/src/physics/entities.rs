@@ -3,7 +3,7 @@
 use nalgebra::{Isometry2, Point2, Vector2};
 use ncollide2d::shape::{ConvexPolygon, Cuboid, ShapeHandle};
 use nphysics2d::algebra::Velocity2;
-use nphysics2d::object::{BodyHandle, ColliderHandle, SensorHandle};
+use nphysics2d::object::{BodyHandle, BodyStatus, ColliderHandle, SensorHandle};
 
 use super::{world::COLLIDER_MARGIN, Movement};
 use conf::CONF;
@@ -33,6 +33,7 @@ pub struct EntitySpawn<T = ()> {
     pub velocity: Velocity2<f32>,
     pub entity: Entity,
     pub data: T,
+    pub body_status: BodyStatus,
 }
 
 pub struct EntityHandles<T> {
@@ -74,9 +75,15 @@ pub struct AsteroidEntity {
 }
 
 #[derive(Debug)]
+pub struct BarrierEntity {
+    pub vertices: Vec<Point2<f32>>,
+}
+
+#[derive(Debug)]
 pub enum Entity {
     Player(PlayerEntity),
     Asteroid(AsteroidEntity),
+    Barrier(BarrierEntity),
 }
 
 impl Entity {
@@ -85,17 +92,27 @@ impl Entity {
         &self,
         env: rustler::Env<'a>,
     ) -> rustler::NifResult<(rustler::types::atom::Atom, rustler::Term<'a>)> {
-        use rustler::{types::atom::Atom, Encoder, Env, NifResult, Term};
+        use rustler::{types::atom::Atom, Encoder, NifResult, Term};
 
         use super::super::atoms;
 
-        fn make_map<'a>(env: Env<'a>, items: &[(Atom, &Encoder)]) -> NifResult<Term<'a>> {
+        let make_map = |items: &[(Atom, &Encoder)]| -> NifResult<Term<'a>> {
             let mut map = Term::map_new(env);
             for (key, val) in items {
                 map = map.map_put(key.encode(env), val.encode(env))?;
             }
             Ok(map)
-        }
+        };
+
+        let make_vert_map = |verts: &[Point2<f32>]| -> NifResult<Term<'a>> {
+            let map = Term::map_new(env);
+            let mut mapped_verts: Vec<f32> = Vec::with_capacity(verts.len() * 2);
+            for vert in verts {
+                mapped_verts.push(vert.x);
+                mapped_verts.push(vert.y);
+            }
+            map.map_put(atoms::vert_coords().encode(env), mapped_verts.encode(env))
+        };
 
         match self {
             Entity::Player(PlayerEntity {
@@ -105,29 +122,20 @@ impl Entity {
                 beam_on,
             }) => {
                 let movement_atom: Atom = (*movement).into();
-                let map = make_map(
-                    env,
-                    &[
-                        (atoms::size(), size),
-                        (atoms::movement(), &movement_atom),
-                        (atoms::beam_aim(), &(beam_aim.x, beam_aim.y)),
-                        (atoms::beam_on(), beam_on),
-                    ],
-                )?;
+                let map = make_map(&[
+                    (atoms::size(), size),
+                    (atoms::movement(), &movement_atom),
+                    (atoms::beam_aim(), &(beam_aim.x, beam_aim.y)),
+                    (atoms::beam_on(), beam_on),
+                ])?;
 
                 Ok((atoms::player(), map))
             }
             Entity::Asteroid(AsteroidEntity { vertices }) => {
-                let map = Term::map_new(env);
-                let mut mapped_verts: Vec<f32> = Vec::with_capacity(vertices.len() * 2);
-                for vert in vertices {
-                    mapped_verts.push(vert.x);
-                    mapped_verts.push(vert.y);
-                }
-                let map =
-                    map.map_put(atoms::vert_coords().encode(env), mapped_verts.encode(env))?;
-
-                Ok((atoms::asteroid(), map))
+                Ok((atoms::asteroid(), make_vert_map(&vertices)?))
+            }
+            Entity::Barrier(BarrierEntity { vertices }) => {
+                Ok((atoms::barrier(), make_vert_map(&vertices)?))
             }
         }
     }
@@ -135,7 +143,8 @@ impl Entity {
     pub fn get_shape_handle(&self) -> ShapeHandle<f32> {
         match self {
             Entity::Player(PlayerEntity { size, .. }) => create_player_shape_handle(*size as f32),
-            Entity::Asteroid(AsteroidEntity { vertices, .. }) => {
+            Entity::Asteroid(AsteroidEntity { vertices })
+            | Entity::Barrier(BarrierEntity { vertices }) => {
                 let shape = ConvexPolygon::try_new(vertices.clone())
                     .expect("Unable to compute `ConvexPolygon` from asteroid vertices!");
                 ShapeHandle::new(shape)
@@ -147,6 +156,7 @@ impl Entity {
         match self {
             Entity::Player { .. } => 1.0,
             Entity::Asteroid { .. } => 3.5,
+            Entity::Barrier { .. } => 10.0,
         }
     }
 }

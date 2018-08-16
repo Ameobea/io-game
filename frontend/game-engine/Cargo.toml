@@ -29,7 +29,7 @@ version = "0.6.5"
 [dependencies.wasm-bindgen]
 features = ["serde-serialize"]
 git = "https://github.com/rustwasm/wasm-bindgen.git"
-rev = "64591ef4038108104a10fbde62670f3232e76960"
+rev = "f8354b3a88de013845a304ea77d8b9b9286a0d7b"
 
 [lib]
 crate-type = ["cdylib"]

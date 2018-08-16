@@ -47,6 +47,7 @@ pub mod atoms {
         // Entity Types
         atom player;
         atom asteroid;
+        atom barrier;
 
         // Proximity Events
         atom intersecting;

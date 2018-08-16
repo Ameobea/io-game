@@ -2,10 +2,16 @@ defmodule BackendWeb.UserSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "rooms:game", BackendWeb.GameChannel
+  channel("rooms:game", BackendWeb.GameChannel)
 
   ## Transports
-  transport :websocket, Phoenix.Transports.WebSocket, serializer: [{BackendWeb.ProtoSerializer, "1.0.0"}]
+  transport(
+    :websocket,
+    Phoenix.Transports.WebSocket,
+    serializer: [{BackendWeb.ProtoSerializer, "1.0.0"}],
+    check_origin: ["//localhost:3699", "//io.ameo.design", "//ameo.design", "//ameo.design:3699"]
+  )
+
   # transport :longpoll, Phoenix.Transports.LongPoll
 
   # Socket params are passed from the client and can
