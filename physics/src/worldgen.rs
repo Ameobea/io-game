@@ -74,8 +74,8 @@ fn create_barrier(width: f32, height: f32, isometry: Isometry2<f32>) -> EntitySp
 
 pub fn get_initial_entities() -> Vec<EntitySpawn> {
     vec![
-        create_asteroid(),
-        create_asteroid(),
+        // create_asteroid(),
+        // create_asteroid(),
         create_barrier(500.0, 100.0, Isometry2::new(Vector2::new(300.0, 0.0), 0.0)),
         create_barrier(
             500.0,

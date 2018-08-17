@@ -3,8 +3,8 @@ use std::sync::Mutex;
 use nalgebra::{Isometry2, Point2, Vector2};
 use ncollide2d::events::ContactEvent;
 use ncollide2d::query::Proximity;
-use ncollide2d::world::CollisionObject;
-use nphysics2d::object::{Body, BodyHandle, ColliderData, ColliderHandle, Material};
+use nphysics2d::algebra::Velocity2;
+use nphysics2d::object::{Body, BodyHandle, ColliderHandle, Material};
 use nphysics2d::volumetric::Volumetric;
 use rustler::error::Error as NifError;
 use rustler::{types::atom::Atom, Encoder, Env, NifResult, Term};
@@ -296,36 +296,31 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
             ..
         } = world;
 
-        let create_pos_update_inner = |collider: &CollisionObject<f32, ColliderData<f32>>,
-                                       uuid: String,
-                                       body_handle: BodyHandle|
-         -> Update {
-            let isometry = collider.position();
-            let velocity = world
-                .rigid_body(body_handle)
-                .expect("Non-rigid body in `create_pos_update`")
-                .velocity();
-            let movement_update = MovementUpdate {
-                pos_x: isometry.translation.vector.x,
-                pos_y: isometry.translation.vector.y,
-                rotation: isometry.rotation.angle(),
-                velocity_x: velocity.linear.x,
-                velocity_y: velocity.linear.y,
-                angular_velocity: velocity.angular,
+        let create_pos_update_inner =
+            |pos: &Isometry2<f32>, uuid: String, body_handle: BodyHandle| -> Option<Update> {
+                let velocity = world.rigid_body(body_handle)?.velocity();
+                let movement_update = MovementUpdate {
+                    pos_x: pos.translation.vector.x,
+                    pos_y: pos.translation.vector.y,
+                    rotation: pos.rotation.angle(),
+                    velocity_x: velocity.linear.x,
+                    velocity_y: velocity.linear.y,
+                    angular_velocity: velocity.angular,
+                };
+
+                Some(Update::new_movement_update(env, uuid, movement_update))
             };
-            Update::new_movement_update(env, uuid, movement_update)
-        };
 
         // Looks up the collider with the given handle, creates an `Update` with its position,
         // and pushes it into the update list.
         let create_pos_update =
-            |collider_handle: ColliderHandle, body_handle: BodyHandle| -> Update {
+            |collider_handle: ColliderHandle, body_handle: BodyHandle| -> Option<Update> {
                 let collider = world.collider(collider_handle).unwrap();
                 let uuid = handle_map
                     .get(&collider_handle)
                     .expect("`ColliderHandle` wasn't in the `handle_map`!");
 
-                create_pos_update_inner(collider, uuid.clone(), body_handle)
+                create_pos_update_inner(collider.position(), uuid.clone(), body_handle)
             };
 
         for prox_evt in world.proximity_events() {
@@ -365,11 +360,14 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
             // Create position updates for all managed entities
             for (collider_handle, uuid) in handle_map.iter() {
                 let collider = world.collider(*collider_handle).unwrap();
-                updates.push(create_pos_update_inner(
-                    collider,
+                let update_opt = create_pos_update_inner(
+                    collider.position(),
                     uuid.clone(),
                     world.collider_body_handle(*collider_handle).unwrap(),
-                ));
+                );
+                if let Some(update) = update_opt {
+                    updates.push(update);
+                }
             }
         } else {
             // Create position events for all entities that have just been involved in a collision
@@ -377,14 +375,15 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
                 match contact_evt {
                     ContactEvent::Started(handle_1, handle_2)
                     | ContactEvent::Stopped(handle_1, handle_2) => {
-                        updates.push(create_pos_update(
-                            *handle_1,
-                            world.collider_body_handle(*handle_1).unwrap(),
-                        ));
-                        updates.push(create_pos_update(
-                            *handle_2,
-                            world.collider_body_handle(*handle_2).unwrap(),
-                        ));
+                        for handle in &[handle_1, handle_2] {
+                            let update_opt = create_pos_update(
+                                **handle,
+                                world.collider_body_handle(**handle).unwrap(),
+                            );
+                            if let Some(update) = update_opt {
+                                updates.push(update);
+                            }
+                        }
                     }
                 }
             }
@@ -511,9 +510,11 @@ pub fn get_snapshot<'a>(env: Env<'a>, _args: &[Term<'a>]) -> NifResult<Term<'a>>
             let body_handle: BodyHandle = collider.data().body();
             let body = world.world.body(body_handle);
             let (velocity, center_of_mass) = match body {
-                Body::RigidBody(rigid_body) => (rigid_body.velocity(), rigid_body.center_of_mass()),
+                Body::RigidBody(rigid_body) => {
+                    (rigid_body.velocity().clone(), rigid_body.center_of_mass())
+                }
                 Body::Multibody(_) => unimplemented!(),
-                Body::Ground(_) => unimplemented!(),
+                Body::Ground(_) => (Velocity2::new(Vector2::zeros(), 0.0), Point2::origin()),
             };
 
             let data = EntityData {
@@ -524,8 +525,8 @@ pub fn get_snapshot<'a>(env: Env<'a>, _args: &[Term<'a>]) -> NifResult<Term<'a>>
                     pos_x: isometry.translation.vector.x,
                     pos_y: isometry.translation.vector.y,
                     rotation: isometry.rotation.angle(),
-                    velocity_x: (*velocity).linear.x,
-                    velocity_y: (*velocity).linear.y,
+                    velocity_x: (velocity).linear.x,
+                    velocity_y: (velocity).linear.y,
                     angular_velocity: velocity.angular,
                 },
                 entity_type: entity_name,

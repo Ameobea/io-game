@@ -5,7 +5,7 @@
 import { getCanvas } from './renderMethods';
 import { continueInit, handleWsMsg, getEngine } from './index';
 
-const wsUrl = `ws://${window.location.host}/socket/websocket?vsn=1.0.0`;
+const wsUrl = `ws://${window.location.hostname}:4000/socket/websocket?vsn=1.0.0`;
 const gameSocket = new WebSocket(wsUrl);
 
 gameSocket.binaryType = 'arraybuffer';

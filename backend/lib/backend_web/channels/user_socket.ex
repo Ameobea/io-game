@@ -9,7 +9,13 @@ defmodule BackendWeb.UserSocket do
     :websocket,
     Phoenix.Transports.WebSocket,
     serializer: [{BackendWeb.ProtoSerializer, "1.0.0"}],
-    check_origin: ["//localhost:3699", "//io.ameo.design", "//ameo.design", "//ameo.design:3699"]
+    check_origin: [
+      "//localhost:3699",
+      "//localhost:8080",
+      "//io.ameo.design",
+      "//ameo.design",
+      "//ameo.design:3699"
+    ]
   )
 
   # transport :longpoll, Phoenix.Transports.LongPoll

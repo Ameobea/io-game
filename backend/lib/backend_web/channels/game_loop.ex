@@ -58,8 +58,8 @@ defmodule BackendWeb.GameLoop do
 
   defp update_topic(topic, topic_state, tick, time_diff, player_inputs) do
     # TODO: rather than reversing player inputs here, just push them to the front of the buffer
-    update_all = rem(tick, 3) == 0 # Send full snapshot every 3 ticks ~(50ms)
-    updates = NativePhysics.tick(player_inputs |> Enum.reverse, true)
+    update_all = rem(tick, 15) == 0 # Send full snapshot every 3 ticks ~(50ms)
+    updates = NativePhysics.tick(player_inputs |> Enum.reverse, update_all)
     if is_list(updates) do
       payload = updates
         |> Enum.map(&handle_update/1)

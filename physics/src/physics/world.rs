@@ -6,7 +6,7 @@ use std::usize;
 use nalgebra::{Isometry2, Vector2};
 use nphysics2d::algebra::Velocity2;
 use nphysics2d::force_generator::{ForceGenerator, ForceGeneratorHandle};
-use nphysics2d::object::{BodyHandle, BodySet, ColliderHandle, Material, RigidBody};
+use nphysics2d::object::{BodyHandle, BodySet, BodyStatus, ColliderHandle, Material, RigidBody};
 use nphysics2d::solver::{IntegrationParameters, SignoriniModel};
 use nphysics2d::volumetric::Volumetric;
 use nphysics2d::world::World;
@@ -97,7 +97,7 @@ impl ForceGenerator<f32> for PlayerMovementForceGenerator {
 impl<T> PhysicsWorldInner<T> {
     pub fn new() -> Self {
         let mut world = World::new();
-        world.set_contact_model(SignoriniModel::new());
+        // world.set_contact_model(SignoriniModel::new());
         world.set_timestep(CONF.physics.engine_time_step);
 
         PhysicsWorldInner {
@@ -157,27 +157,42 @@ impl<T> PhysicsWorldInner<T> {
         let shape_handle = entity.get_shape_handle();
         let inertia = shape_handle.inertia(entity.get_density());
         let center_of_mass = shape_handle.center_of_mass();
-        let body_handle = self.world.add_rigid_body(isometry, inertia, center_of_mass);
 
-        let body = self.world.rigid_body_mut(body_handle).unwrap();
-        body.set_velocity(velocity);
-        body.set_status(body_status);
+        let (collider_handle, body_handle) = if body_status == BodyStatus::Static {
+            let collider_handle = self.world.add_collider(
+                COLLIDER_MARGIN,
+                shape_handle,
+                BodyHandle::ground(),
+                isometry,
+                Material::default(),
+            );
 
-        let collider_handle = self.world.add_collider(
-            COLLIDER_MARGIN,
-            shape_handle,
-            body_handle,
-            Isometry2::identity(),
-            Material::default(),
-        );
+            (collider_handle, BodyHandle::ground())
+        } else {
+            let body_handle = self.world.add_rigid_body(isometry, inertia, center_of_mass);
 
-        if let Entity::Player(_) = entity {
-            let force_generator = PlayerMovementForceGenerator::new(body_handle, Movement::Stop);
-            let force_gen_handle = self.world.add_force_generator(force_generator);
-            self.user_handles
-                .push((body_handle, uuid_to_key(uuid), force_gen_handle));
-        }
+            let body = self.world.rigid_body_mut(body_handle).unwrap();
+            body.set_velocity(velocity);
+            body.set_status(body_status);
 
+            let collider_handle = self.world.add_collider(
+                COLLIDER_MARGIN,
+                shape_handle,
+                body_handle,
+                Isometry2::identity(),
+                Material::default(),
+            );
+
+            if let Entity::Player(_) = entity {
+                let force_generator =
+                    PlayerMovementForceGenerator::new(body_handle, Movement::Stop);
+                let force_gen_handle = self.world.add_force_generator(force_generator);
+                self.user_handles
+                    .push((body_handle, uuid_to_key(uuid), force_gen_handle));
+            }
+
+            (collider_handle, body_handle)
+        };
         let handles = EntityHandles {
             collider_handle,
             body_handle,

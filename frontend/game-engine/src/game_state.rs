@@ -147,17 +147,22 @@ impl GameState {
                 entity,
                 body_handle,
                 data: client_state,
+                collider_handle,
                 ..
             },
         ) in &mut self.world.uuid_map
         {
             tick(entity, client_state, self.cur_tick);
-            let pos = self
-                .world
-                .world
-                .rigid_body(*body_handle)
-                .expect("`body_handle` in `uuid_map` not in world as ridgid body!")
-                .position();
+            let pos = match self.world.world.rigid_body(*body_handle) {
+                Some(body) => body.position(),
+                None => *self
+                    .world
+                    .world
+                    .collider(*collider_handle)
+                    .expect("Neither rigid body nor collider in world")
+                    .position(),
+            };
+
             render(entity, client_state, &pos, self.cur_tick);
         }
 
@@ -171,7 +176,7 @@ impl GameState {
         let entity_data = match parse_proto_entity(creation_evt) {
             Some(entity) => entity,
             None => {
-                println!("Error while parsing `CreationEvent` into an entity");
+                error("Error while parsing `CreationEvent` into an entity");
                 return;
             }
         };
