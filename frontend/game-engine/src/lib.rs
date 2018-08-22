@@ -1,9 +1,4 @@
-#![feature(
-    box_syntax,
-    use_extern_macros,
-    trivial_bounds,
-    nll,
-)]
+#![feature(box_syntax, trivial_bounds, nll)]
 
 extern crate libcomposition;
 extern crate nalgebra;

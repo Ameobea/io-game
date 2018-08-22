@@ -7,7 +7,7 @@ use nalgebra::{Isometry2, Vector2};
 use nphysics2d::algebra::Velocity2;
 use nphysics2d::force_generator::{ForceGenerator, ForceGeneratorHandle};
 use nphysics2d::object::{BodyHandle, BodySet, BodyStatus, ColliderHandle, Material, RigidBody};
-use nphysics2d::solver::{IntegrationParameters, SignoriniModel};
+use nphysics2d::solver::IntegrationParameters;
 use nphysics2d::volumetric::Volumetric;
 use nphysics2d::world::World;
 use uuid::Uuid;
@@ -268,11 +268,7 @@ impl<T> PhysicsWorldInner<T> {
         pos: &Isometry2<f32>,
         velocity: &Velocity2<f32>,
     ) {
-        let EntityHandles {
-            body_handle,
-            collider_handle,
-            ..
-        } = match self.uuid_map.get(entity_id) {
+        let EntityHandles { body_handle, .. } = match self.uuid_map.get(entity_id) {
             Some(handles) => handles,
             None => {
                 println!(
@@ -288,19 +284,7 @@ impl<T> PhysicsWorldInner<T> {
             .rigid_body_mut(*body_handle)
             .expect(WORLD_MISSING_ERR);
         rigid_body.set_velocity(*velocity);
-
-        let collider = self
-            .world
-            .collision_world_mut()
-            .collision_object_mut(*collider_handle)
-            .expect("ERROR: `collider_handle` in `uuid_map` but not the world");
-        let pos_wrt_body = *collider.data().position_wrt_body();
-
-        // Set the position of the attached `CollisionObject`
-        collider.set_position(*pos);
-        self.world
-            .collision_world_mut()
-            .set_position(*collider_handle, pos_wrt_body * *pos);
+        rigid_body.set_position(*pos);
     }
 
     /// Removes all entities from this world

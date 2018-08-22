@@ -57,10 +57,10 @@ fn create_barrier(width: f32, height: f32, isometry: Isometry2<f32>) -> EntitySp
     let half_width = width / 2.0;
     let half_height = height / 2.0;
     let vertices = vec![
-        pt2(half_width + 0.5, half_height + 0.75),
-        pt2(half_width - 0.5, -half_height + 0.55),
-        pt2(-half_width - 0.75, -half_height + 0.875),
-        pt2(-half_width - 0.35, half_height + 0.45),
+        pt2(half_width, half_height),
+        pt2(-half_width, half_height),
+        pt2(-half_width, -half_height),
+        pt2(half_width, -half_height),
     ];
 
     EntitySpawn {
@@ -74,8 +74,8 @@ fn create_barrier(width: f32, height: f32, isometry: Isometry2<f32>) -> EntitySp
 
 pub fn get_initial_entities() -> Vec<EntitySpawn> {
     vec![
-        // create_asteroid(),
-        // create_asteroid(),
+        create_asteroid(),
+        create_asteroid(),
         create_barrier(500.0, 100.0, Isometry2::new(Vector2::new(300.0, 0.0), 0.0)),
         create_barrier(
             500.0,
