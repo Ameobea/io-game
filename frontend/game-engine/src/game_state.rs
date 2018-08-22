@@ -116,7 +116,7 @@ impl GameState {
                     }
                 };
 
-                apply_update(entity, client_state, &update);
+                apply_update(entity_id, entity, client_state, &update);
             }
         }
     }

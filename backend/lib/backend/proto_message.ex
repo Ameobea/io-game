@@ -14,6 +14,7 @@ defmodule Backend.ProtoMessage do
     AsteroidEntity,
     BarrierEntity,
     ServerMessage.Payload,
+    Point2,
   }
   alias NativePhysics
   alias NativePhysics.MovementUpdate

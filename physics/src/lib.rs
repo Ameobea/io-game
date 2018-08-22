@@ -43,6 +43,7 @@ pub mod atoms {
         atom isometry;
         atom beam_event;
         atom username;
+        atom player_movement;
 
         // Entity Types
         atom player;

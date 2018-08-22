@@ -69,6 +69,9 @@ message ServerMessage {
       Snapshot snapshot = 4;
       ServerError error = 5;
       Uuid connect_successful = 6;
+      MovementDirection player_input = 7;
+      bool beam_toggle = 8;
+      Point2 beam_aim = 9;
     }
   }
 

@@ -7,6 +7,7 @@ pub use native_physics::physics::entities::{
 use ncollide2d::query::Ray;
 use nphysics2d::algebra::Velocity2;
 use nphysics2d::object::BodyStatus;
+use uuid::Uuid;
 
 use game::effects::DrillingParticles;
 use game_state::{get_effects_manager, get_state};
@@ -31,11 +32,46 @@ pub enum ClientState {
 }
 
 pub fn apply_update(
-    _entity: &mut Entity,
+    entity_id: Uuid,
+    entity: &mut Entity,
     _client_state: &mut ClientState,
-    _update: &ServerMessageContent,
+    update: &ServerMessageContent,
 ) {
-    warn("Unhandled update");
+    match update {
+        ServerMessageContent::beam_toggle(_)
+        | ServerMessageContent::beam_aim(_)
+        | ServerMessageContent::player_input(_) => {
+            // Ignore these updates targeting the player's own entity, since they are handled locally.
+            if entity_id == get_state().player_uuid {
+                return;
+            }
+
+            let player = match entity {
+                Entity::Player(player) => player,
+                _ => {
+                    error(format!(
+                        "Received player update for non-player entity with id {}!",
+                        entity_id
+                    ));
+                    return;
+                }
+            };
+
+            match update {
+                ServerMessageContent::beam_toggle(beam_on) => {
+                    player.beam_on = *beam_on;
+                }
+                ServerMessageContent::beam_aim(beam_aim) => {
+                    player.beam_aim = Point2::new(beam_aim.x, beam_aim.y);
+                }
+                ServerMessageContent::player_input(player_movement) => {
+                    player.movement = (*player_movement).into();
+                }
+                _ => unreachable!(),
+            }
+        }
+        _ => warn("Unhandled Update"),
+    }
 }
 
 pub fn tick(_entity: &mut Entity, _client_state: &mut ClientState, _cur_tick: usize) {}

@@ -64,88 +64,98 @@ impl PhysicsWorld {
             }
         };
 
-        let expected_player =
-            || println!("ERROR: Received `beam_aim` update for non-player entity!");
+        let expected_player = || println!("ERROR: Received invalid update for non-player entity!");
 
         match diff.action {
             InternalUserDiffAction::Movement(new_movement) => match *entity {
                 Entity::Player(PlayerEntity {
                     ref mut movement, ..
-                }) => *movement = new_movement,
+                }) => {
+                    *movement = new_movement;
+                    updates.push(Update::new_player_movement(env, uuid, new_movement))
+                }
                 _ => expected_player(),
             },
             InternalUserDiffAction::BeamAim { x, y } => {
-                match *entity {
-                    Entity::Player(PlayerEntity {
-                        ref mut beam_aim, ..
-                    }) => {
-                        // Calculate the angle in radians produced by looking at (x, y) from the
-                        // player's position
-                        let new_beam_aim = Point2::new(x, y);
-                        let rotation = (y / x).atan();
-
-                        *beam_aim = new_beam_aim;
-                        match beam_handle {
-                            Some(beam_handle) => {
-                                // Move the beam sensor
-                                let beam_collider = world.collider(*beam_handle).expect(
-                                    "No beam sensor in the world matching the stored handle!",
-                                );
-                                let old_pos = beam_collider.position();
-                                let pos_wrt_body = *beam_collider.data().position_wrt_body();
-                                let new_pos =
-                                    pos_wrt_body
-                                        * Isometry2::new(old_pos.translation.vector, rotation);
-
-                                world
-                                    .collision_world_mut()
-                                    .set_position(*beam_handle, new_pos);
-                            }
-                            None => (),
-                        }
+                let PlayerEntity { beam_aim, .. } = match *entity {
+                    Entity::Player(ref mut player) => player,
+                    _ => {
+                        expected_player();
+                        return;
                     }
-                    _ => expected_player(),
+                };
+
+                // Calculate the angle in radians produced by looking at (x, y) from the
+                // player's position
+                let new_beam_aim = Point2::new(x, y);
+                let rotation = (y / x).atan();
+
+                *beam_aim = new_beam_aim;
+                match beam_handle {
+                    Some(beam_handle) => {
+                        // Move the beam sensor
+                        let beam_collider = world
+                            .collider(*beam_handle)
+                            .expect("No beam sensor in the world matching the stored handle!");
+                        let old_pos = beam_collider.position();
+                        let pos_wrt_body = *beam_collider.data().position_wrt_body();
+                        let new_pos =
+                            pos_wrt_body * Isometry2::new(old_pos.translation.vector, rotation);
+
+                        world
+                            .collision_world_mut()
+                            .set_position(*beam_handle, new_pos);
+                    }
+                    None => (),
                 }
+
+                updates.push(Update::new_beam_aim(env, uuid, Point2::new(x, y)));
             }
+
             InternalUserDiffAction::BeamToggle(new_beam_on) => {
                 // Remove the existing beam sensor
-                match *entity {
-                    Entity::Player(PlayerEntity {
-                        beam_aim,
-                        ref mut beam_on,
-                        ..
-                    }) => {
-                        *beam_on = new_beam_on;
-                        if new_beam_on {
-                            // Add a new sensor for the player's beam
-                            if beam_handle.is_some() {
-                                println!("WARN: Received message to turn beam on but we already have a sensor handle for it!");
+                let PlayerEntity {
+                    beam_aim,
+                    ref mut beam_on,
+                    ..
+                } = match *entity {
+                    Entity::Player(ref mut player) => player,
+                    _ => {
+                        expected_player();
+                        return;
+                    }
+                };
+
+                *beam_on = new_beam_on;
+                if new_beam_on {
+                    // Add a new sensor for the player's beam
+                    if beam_handle.is_some() {
+                        println!("WARN: Received message to turn beam on but we already have a sensor handle for it!");
+                        return;
+                    }
+
+                    let new_sensor_handle = world.add_sensor(
+                        BEAM_SHAPE_HANDLE.clone(),
+                        *body_handle,
+                        Isometry2::new(Vector2::zeros(), (beam_aim.y / beam_aim.x).atan()),
+                    );
+                    *beam_handle = Some(new_sensor_handle);
+                    beam_sensors.insert(new_sensor_handle, uuid.clone());
+                } else {
+                    {
+                        let beam_handle_inner = match beam_handle.as_mut() {
+                            Some(handle) => handle,
+                            None => {
+                                println!("WARN: Received message to turn beam off but it was already off");
                                 return;
                             }
-
-                            let new_sensor_handle = world.add_sensor(
-                                BEAM_SHAPE_HANDLE.clone(),
-                                *body_handle,
-                                Isometry2::new(Vector2::zeros(), (beam_aim.y / beam_aim.x).atan()),
-                            );
-                            *beam_handle = Some(new_sensor_handle);
-                            beam_sensors.insert(new_sensor_handle, uuid.clone());
-                        } else {
-                            {
-                                let beam_handle_inner = match beam_handle.as_mut() {
-                                    Some(handle) => handle,
-                                    None => {
-                                        println!("WARN: Received message to turn beam off but it was already off");
-                                        return;
-                                    }
-                                };
-                                world.remove_colliders(&[*beam_handle_inner]);
-                            }
-                            *beam_handle = None;
-                        }
+                        };
+                        world.remove_colliders(&[*beam_handle_inner]);
                     }
-                    _ => println!("ERROR: Received `beam_toggle` update for non-player entity!"),
+                    *beam_handle = None;
                 }
+
+                updates.push(Update::new_beam_toggle(env, uuid, new_beam_on));
             }
             InternalUserDiffAction::Username(username) => {
                 updates.push(Update::new_username(env, uuid, username));
@@ -240,6 +250,43 @@ impl<'a> Update<'a> {
             id,
             update_type: atoms::username(),
             payload: username.encode(env),
+        }
+    }
+
+    pub fn new_player_movement(env: Env<'a>, player_id: String, movement: Movement) -> Self {
+        let movement_atom: Atom = movement.into();
+
+        Update {
+            id: player_id,
+            update_type: atoms::player_movement(),
+            payload: movement_atom.encode(env),
+        }
+    }
+
+    pub fn new_beam_toggle(env: Env<'a>, player_id: String, beam_on: bool) -> Self {
+        Update {
+            id: player_id,
+            update_type: atoms::beam_toggle(),
+            payload: beam_on.encode(env),
+        }
+    }
+
+    pub fn new_beam_aim(env: Env<'a>, player_id: String, beam_aim: Point2<f32>) -> Self {
+        let map = Term::map_new(env);
+        const ERR_MSG: &'static str = "Error while building map in `new_beam_aim`!";
+        let map = map
+            .map_put(atoms::x().encode(env), beam_aim.x.encode(env))
+            .map_err(|_| ERR_MSG)
+            .unwrap();
+        let map = map
+            .map_put(atoms::y().encode(env), beam_aim.y.encode(env))
+            .map_err(|_| ERR_MSG)
+            .unwrap();
+
+        Update {
+            id: player_id,
+            update_type: atoms::beam_aim(),
+            payload: map,
         }
     }
 }

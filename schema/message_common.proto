@@ -16,3 +16,8 @@ enum MovementDirection {
   UP_LEFT = 7;
   STOP = 8;
 }
+
+message Point2 {
+  float x = 1;
+  float y = 2;
+}

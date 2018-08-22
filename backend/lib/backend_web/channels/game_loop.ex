@@ -3,7 +3,7 @@ defmodule BackendWeb.GameLoop do
   alias BackendWeb.GameState
   alias NativePhysics
   alias Backend.ProtoMessage
-  alias Backend.ProtoMessage.{ServerMessage, MovementUpdate}
+  alias Backend.ProtoMessage.{ServerMessage, Point2}
 
   @timedelay 16
   @nanoseconds_to_seconds 1_000_000_000
@@ -79,7 +79,7 @@ defmodule BackendWeb.GameLoop do
     id: id,
     update_type: :isometry,
     payload: payload,
-  } = update) do
+  }) do
     internal_movement_update = payload
       |> Map.from_struct
       |> Backend.ProtoMessage.MovementUpdate.new
@@ -90,6 +90,45 @@ defmodule BackendWeb.GameLoop do
         :movement_update,
         internal_movement_update,
       }
+    })
+  end
+
+  defp handle_update(%NativePhysics.Update{
+    id: id,
+    update_type: :player_movement,
+    payload: payload,
+  }) do
+    ServerMessage.Payload.new(%{
+      id: ProtoMessage.to_proto_uuid(id),
+      payload: {
+        :player_input,
+        payload
+      }
+    })
+  end
+
+  defp handle_update(%NativePhysics.Update{
+    id: id,
+    update_type: :beam_toggle,
+    payload: payload,
+  }) do
+    ServerMessage.Payload.new(%{
+      id: ProtoMessage.to_proto_uuid(id),
+      payload: {
+        :beam_toggle,
+        payload
+      }
+    })
+  end
+
+  defp handle_update(%NativePhysics.Update{
+    id: id,
+    update_type: :beam_aim,
+    payload: payload,
+  }) do
+    ServerMessage.Payload.new(%{
+      id: ProtoMessage.to_proto_uuid(id),
+      payload: { :beam_aim, Point2.new(payload) }
     })
   end
 
