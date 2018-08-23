@@ -81,34 +81,34 @@ pub fn handle_server_msg(bytes: &[u8]) {
         }
     };
 
-    match event.into_option() {
-        Some(evt) => {
-            match evt.payload {
-                Some(EventPayload::custom_event(_)) | Some(EventPayload::phoenix_event(PhoenixEvent::Reply)) => {
-                    // warn_msg(&evt, &topic);
-                    let server_msg: ServerMessage = match payload.into_option() {
-                        Some(msg) => msg,
-                        None => {
-                            error("Received `ServerSocketMessage` without a `ServerMessage` payload");
-                            return;
-                        }
-                    };
+    if event.is_none() {
+        warn("Received channel message with no event payload!");
+        return;
+    }
 
-                    get_state().apply_msg(server_msg);
-                },
-                Some(EventPayload::phoenix_event(evt)) => match evt {
-                    PhoenixEvent::Close => warn_msg("close", &topic),
-                    PhoenixEvent::Join => warn_msg("join", &topic),
-                    PhoenixEvent::Reply => warn_msg("reply", &topic),
-                    PhoenixEvent::Leave => warn_msg("leave", &topic),
-                    PhoenixEvent::Error => error(format!(
-                        "Phoenix error; topic: {}.  Can't print payload because of insane reflection codegen bloat.",
-                        topic
-                    )),
-                },
-                None => error("Received channel event with no inner payload!"),
-            }
+    match event.unwrap().payload {
+        Some(EventPayload::custom_event(_))
+        | Some(EventPayload::phoenix_event(PhoenixEvent::Reply)) => {
+            let server_msg: ServerMessage = match payload.into_option() {
+                Some(msg) => msg,
+                None => {
+                    error("Received `ServerSocketMessage` without a `ServerMessage` payload");
+                    return;
+                }
+            };
+
+            get_state().apply_msg(server_msg);
         }
-        None => warn("Received channel message with no event payload!"),
+        Some(EventPayload::phoenix_event(evt)) => match evt {
+            PhoenixEvent::Close => warn_msg("close", &topic),
+            PhoenixEvent::Join => warn_msg("join", &topic),
+            PhoenixEvent::Reply => warn_msg("reply", &topic),
+            PhoenixEvent::Leave => warn_msg("leave", &topic),
+            PhoenixEvent::Error => error(format!(
+                "Phoenix error; topic: {}.  Can't print due to reflection codegen bloat.",
+                topic
+            )),
+        },
+        None => error("Received channel event with no inner payload!"),
     }
 }

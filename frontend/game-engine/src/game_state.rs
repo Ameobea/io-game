@@ -19,7 +19,7 @@ use protos::server_messages::{
 };
 use render_effects::RenderEffectManager;
 use user_input::CurHeldKeys;
-use util::{error, log, warn};
+use util::{error, warn};
 
 pub static mut STATE: *mut GameState = ptr::null_mut();
 pub static mut EFFECTS_MANAGER: *mut RenderEffectManager = ptr::null_mut();
@@ -92,7 +92,6 @@ impl GameState {
             }
             ServerMessageContent::connect_successful(player_id) => {
                 let player_id: Uuid = player_id.into();
-                log(format!("Setting player ID: {}", player_id));
                 self.player_uuid = player_id;
             }
             ServerMessageContent::movement_update(ref movement_update) => {
@@ -124,11 +123,9 @@ impl GameState {
     /// Removes all items from the UUID map and the DBVT, then reconstruct the game state from the
     /// contents of the snapshot
     fn apply_snapshot(&mut self, snapshot: Snapshot) {
-        log("Clearing game state and applying snapshot...");
         self.world.clear();
 
         for mut snapshot_item in snapshot.items.into_iter() {
-            log("Applying snapshot item...");
             let uuid: Uuid = snapshot_item.take_id().into();
             let creation_evt = snapshot_item.get_item();
             self.create_entity(uuid, creation_evt);
@@ -172,7 +169,6 @@ impl GameState {
 
     /// Creates an `Entity` from a `CreationEvent` and spawns it into the world
     pub fn create_entity(&mut self, entity_id: Uuid, creation_evt: &CreationEvent) {
-        log(format!("Creating entity with id {}", entity_id));
         let entity_data = match parse_proto_entity(creation_evt) {
             Some(entity) => entity,
             None => {

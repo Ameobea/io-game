@@ -30,7 +30,6 @@ pub mod util;
 
 use game_state::{get_effects_manager, get_state, GameState, EFFECTS_MANAGER, STATE};
 use phoenix_proto::{join_game_channel, send_connect_message};
-use proto_utils::parse_server_message;
 use render_effects::RenderEffectManager;
 use util::error;
 
@@ -102,13 +101,6 @@ pub fn init(canvas_width: f32, canvas_height: f32) {
     create_background_texture(1500, 1500, &background_texture);
 
     send_connect_message();
-}
-
-#[wasm_bindgen]
-pub fn handle_message(bytes: &[u8]) {
-    if let Some(msg) = parse_server_message(bytes) {
-        get_state().apply_msg(msg)
-    }
 }
 
 #[wasm_bindgen]

@@ -3,3 +3,4 @@ node_modules/
 dist/
 src/game_engine*
 src/conf/*
+*.wat

@@ -23,7 +23,6 @@ export const start_game_loop = () => tick();
 wasm
   .then(async engine => {
     engineHandle = engine;
-    (window as any).handle_message = engine.handle_channel_message;
 
     const { canvasHeight, canvasWidth } = initWebGL();
 

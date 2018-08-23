@@ -5,7 +5,7 @@ name = "game-engine"
 version = "0.1.0"
 
 [build-dependencies]
-protobuf-codegen-pure = "2.0.3"
+protobuf-codegen-pure = { git = "https://github.com/Ameobea/rust-protobuf.git", rev = "simplify-parsing" }
 config_loader = { path = "../../config_loader" }
 
 [dependencies]
@@ -13,7 +13,7 @@ lazy_static = "1.0.2"
 nalgebra = "0.16.0"
 ncollide2d = { git = "https://github.com/Ameobea/ncollide.git", rev = "collision-world-public" }
 noise = "0.5.1"
-protobuf = "2.0.4"
+protobuf = { git = "https://github.com/Ameobea/rust-protobuf.git", rev = "simplify-parsing" }
 physics = { path = "../../physics", default-features = false }
 nphysics2d = { git = "https://github.com/Ameobea/nphysics.git" }
 

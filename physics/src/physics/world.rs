@@ -7,7 +7,7 @@ use nalgebra::{Isometry2, Vector2};
 use nphysics2d::algebra::Velocity2;
 use nphysics2d::force_generator::{ForceGenerator, ForceGeneratorHandle};
 use nphysics2d::object::{BodyHandle, BodySet, BodyStatus, ColliderHandle, Material, RigidBody};
-use nphysics2d::solver::IntegrationParameters;
+use nphysics2d::solver::{IntegrationParameters, SignoriniModel};
 use nphysics2d::volumetric::Volumetric;
 use nphysics2d::world::World;
 use uuid::Uuid;
@@ -97,7 +97,7 @@ impl ForceGenerator<f32> for PlayerMovementForceGenerator {
 impl<T> PhysicsWorldInner<T> {
     pub fn new() -> Self {
         let mut world = World::new();
-        // world.set_contact_model(SignoriniModel::new());
+        world.set_contact_model(SignoriniModel::new());
         world.set_timestep(CONF.physics.engine_time_step);
 
         PhysicsWorldInner {
@@ -127,6 +127,10 @@ impl<T> PhysicsWorldInner<T> {
                 .rigid_body_mut(*user_body_handle)
                 .expect("ERROR: Player wasn't a rigid body!");
 
+            let velocity = *user_rigid_body.velocity();
+            let friction_adjusted_new_velocity = velocity * (1.0 - CONF.physics.friction_per_tick);
+            user_rigid_body.set_velocity(friction_adjusted_new_velocity);
+
             // The physics engine puts entities to sleep if their energies are low enough, causing
             // them to not be simulated.  We manually wake up the player to ensure that the changes
             // we apply to their velocities from movement directions are taken into account by the
@@ -137,8 +141,6 @@ impl<T> PhysicsWorldInner<T> {
             let new_force_gen = PlayerMovementForceGenerator::new(*user_body_handle, movement);
             let new_force_gen_handle = self.world.add_force_generator(new_force_gen);
             *force_gen_handle = new_force_gen_handle;
-
-            // user_rigid_body.set_velocity(friction_adjusted_new_velocity);
         }
 
         // Step the physics simulation
