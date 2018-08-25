@@ -18,6 +18,7 @@ pub struct NetworkConf {
     pub game_channel_name: &'static str,
     pub phoenix_tag: &'static str,
     pub custom_event_name: &'static str,
+    pub message_buffer_size: usize,
 }
 
 pub struct GameConf {
@@ -44,6 +45,7 @@ pub const CONF: Conf = Conf {
         game_channel_name: "{{ network-gameChannelName }}",
         phoenix_tag: "{{ network-phoenixTag }}",
         custom_event_name: "{{ network-customEventName }}",
+        message_buffer_size: {{ network-messageBufferSize }},
     },
     game: GameConf {
         world_min_x: {{ f32 game-worldMinX }},

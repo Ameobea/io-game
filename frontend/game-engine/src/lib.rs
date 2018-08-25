@@ -1,4 +1,4 @@
-#![feature(box_syntax, trivial_bounds, nll)]
+#![feature(box_syntax, trivial_bounds, nll, vec_resize_default)]
 
 extern crate libcomposition;
 extern crate nalgebra;

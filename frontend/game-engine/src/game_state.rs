@@ -11,6 +11,7 @@ use native_physics::physics::world::PhysicsWorldInner as PhysicsWorld;
 use uuid::Uuid;
 
 use super::{init_input_handlers, start_game_loop};
+use conf::CONF;
 use entity::{apply_update, parse_proto_entity, render, tick, ClientState, Entity, PlayerEntity};
 use proto_utils::{parse_server_msg_payload, InnerServerMessage, ServerMessageContent};
 use protos::server_messages::{
@@ -19,7 +20,7 @@ use protos::server_messages::{
 };
 use render_effects::RenderEffectManager;
 use user_input::CurHeldKeys;
-use util::{error, warn};
+use util::{error, warn, CircularBuffer};
 
 pub static mut STATE: *mut GameState = ptr::null_mut();
 pub static mut EFFECTS_MANAGER: *mut RenderEffectManager = ptr::null_mut();
@@ -45,6 +46,7 @@ pub struct GameState {
     pub cur_tick: usize,
     pub player_uuid: Uuid,
     pub world: PhysicsWorld<ClientState>,
+    pub msg_buffer: CircularBuffer<ServerMessage>,
 }
 
 impl GameState {
@@ -53,6 +55,7 @@ impl GameState {
             cur_tick: 0,
             player_uuid: Uuid::nil(), // Placeholder until we are assigned an ID by the server
             world: PhysicsWorld::new(),
+            msg_buffer: CircularBuffer::new(CONF.network.message_buffer_size),
         }
     }
 

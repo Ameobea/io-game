@@ -3,5 +3,6 @@
   "phoenixTransportVersion": "1.0.0",
   "phoenixTag": "game",
   "gameChannelName": "rooms:game",
-  "customEventName": "game"
+  "customEventName": "game",
+  "messageBufferSize": 100
 }

@@ -23,6 +23,9 @@ extern "C" {
     pub fn random() -> f64;
 }
 
+pub mod circular_buffer;
+pub use self::circular_buffer::CircularBuffer;
+
 pub fn debug<T: Debug>(x: T) -> String {
     format!("{:?}", x)
 }
