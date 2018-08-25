@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 #[derive(Debug)]
 pub struct CircularBuffer<T: Default> {
     pub front: usize,
@@ -83,7 +85,7 @@ impl<T: Default> CircularBuffer<T> {
     }
 
     pub fn pop<'a>(&'a mut self) -> Option<&'a T> {
-        if self.front == self.back {
+        if self.front == self.back && !self.full {
             None
         } else {
             let item = &self.data[self.back];
@@ -93,8 +95,44 @@ impl<T: Default> CircularBuffer<T> {
         }
     }
 
+    /// Given an index into the data represented by this buffer, returns the actual index within
+    /// the underlying storage `Vec` of that element.
+    fn transform_index(&self, relative_index: usize) -> usize {
+        if self.back + relative_index >= self.size() {
+            (self.back + relative_index) - self.size()
+        } else {
+            self.back + relative_index
+        }
+    }
+
+    pub fn get<'a>(&'a self, i: usize) -> Option<&'a T> {
+        if i >= self.len() {
+            return None;
+        }
+
+        let real_index = self.transform_index(i);
+
+        self.data.get(real_index)
+    }
+
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a T> {
         CircularBufferIter::new(self)
+    }
+
+    pub fn len(&self) -> usize {
+        if self.front == self.back {
+            if self.full {
+                self.size()
+            } else {
+                0
+            }
+        } else {
+            if self.back > self.front {
+                (self.size() - self.back) + self.front
+            } else {
+                self.front - self.back
+            }
+        }
     }
 }
 
@@ -107,6 +145,15 @@ impl<T: Clone + Default> CircularBuffer<T> {
             self.back = self.next_index(self.back);
             Some(item)
         }
+    }
+}
+
+impl<T: Default> Index<usize> for CircularBuffer<T> {
+    type Output = T;
+
+    fn index(&self, i: usize) -> &Self::Output {
+        let real_index = self.transform_index(i);
+        &self.data[real_index]
     }
 }
 
@@ -132,6 +179,52 @@ fn range_iter() {
     q.pop();
     q.pop();
     assert_eq!(q.iter().cloned().collect::<Vec<_>>(), empty);
+}
+
+#[test]
+fn length() {
+    let mut q: CircularBuffer<u8> = CircularBuffer::new(10);
+    assert_eq!(q.len(), 0);
+    for i in 0..5 {
+        q.push(i);
+    }
+    assert_eq!(q.len(), 5);
+    for i in 5..10 {
+        q.push(i);
+    }
+    assert_eq!(q.len(), 10);
+    for i in 5..10 {
+        q.push(i);
+    }
+    println!("{:?}", q);
+    for _ in 0..5 {
+        println!("{:?}", q.pop());
+    }
+    println!("{:?}", q);
+    assert_eq!(q.len(), 5);
+    for _ in 0..5 {
+        q.pop();
+    }
+    assert_eq!(q.len(), 0);
+}
+
+#[test]
+fn get() {
+    let mut q: CircularBuffer<u8> = CircularBuffer::new(3);
+    assert_eq!(q.get(0), None);
+    assert_eq!(q.get(5), None);
+    q.push(1);
+    assert_eq!(q.get(0), Some(&1));
+    assert_eq!(q.get(1), None);
+    q.pop();
+    assert_eq!(q.front, 1);
+    assert_eq!(q.back, 1);
+    q.push(1);
+    q.push(2);
+    q.push(3);
+    assert_eq!(q.get(0), Some(&1));
+    assert_eq!(q.get(1), Some(&2));
+    assert_eq!(q.get(2), Some(&3));
 }
 
 #[test]

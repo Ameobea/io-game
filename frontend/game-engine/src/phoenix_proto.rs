@@ -97,7 +97,7 @@ pub fn handle_server_msg(bytes: &[u8]) {
                 }
             };
 
-            get_state().apply_msg(server_msg);
+            get_state().queue_msg(server_msg);
         }
         Some(EventPayload::phoenix_event(evt)) => match evt {
             PhoenixEvent::Close => warn_msg("close", &topic),

@@ -59,7 +59,11 @@ impl GameState {
         }
     }
 
-    pub fn apply_msg(&mut self, msg: ServerMessage) {
+    pub fn queue_msg(&mut self, msg: ServerMessage) {
+        self.msg_buffer.push(msg);
+    }
+
+    fn apply_msg(&mut self, msg: ServerMessage) {
         let tick = msg.get_tick();
         let timestamp = msg.get_timestamp();
 
