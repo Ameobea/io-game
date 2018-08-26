@@ -1,6 +1,7 @@
 defmodule Backend.ProtoMessage do
   use Protobuf, from: Path.wildcard(Path.expand("../../../schema/**/*.proto", __DIR__))
 
+  alias BackendWeb.GameState
   alias Backend.ProtoMessage.{
     Uuid,
     Event,
@@ -26,13 +27,15 @@ defmodule Backend.ProtoMessage do
   }
 
   def encode_socket_message(%Phoenix.Socket.Message{payload: %{status: :error}} = message) do
+    {tick, timestamp} = GameState.get_cur_tick_info
+
     ServerChannelMessage.encode(ServerChannelMessage.new(%{
       topic: "rooms:game",
       event: Event.new(%{payload: {:phoenix_event, :Error}}),
       ref: nil,
       payload: ServerMessage.new(%{
-        tick: 0, # TODO
-        timestamp: 0, # TODO
+        tick: tick,
+        timestamp: timestamp,
         payload: [
           ServerMessage.Payload.new(%{
             id: Uuid.new(%{data_1: 0, data_2: 0}),
@@ -81,14 +84,6 @@ defmodule Backend.ProtoMessage do
     Snapshot.new(%{items: items})
   end
 
-  def create_server_message([] = payloads) do
-    ServerMessage.new(%{
-      tick: 0, # TODO: Replace with current tick from game state
-      timestamp: 0.0, # TODO: Replace with timestamp of current tick
-      payload: encode_payload(payloads),
-    })
-  end
-
   # TODO: optimize this iteration
   defp to_snapshot_item({player_id, data = %{}}) do
     %{
@@ -114,8 +109,6 @@ defmodule Backend.ProtoMessage do
 
   defp encode_entity(entity_type, entity_meta) do
     # Convert map keys from strings to atoms
-    # mapped_entity_meta = entity_meta |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
-    # IO.inspect(["ENCODING ENTITY", entity_type, entity_meta])
     {entity_type, @entity_types[entity_type].new(entity_meta)}
   end
 
@@ -131,9 +124,11 @@ defmodule Backend.ProtoMessage do
   defp encode_payload(%{response: payload}), do: encode_payload(payload)
   defp encode_payload(%{__struct__: ServerMessage.Payload} = payload), do: payload
   defp encode_payload(payloads) when is_list(payloads) do
+    {tick, timestamp} = GameState.get_cur_tick_info
+
     ServerMessage.new(%{
-      tick: 0, # TODO
-      timestamp: 0, # TODO
+      tick: tick,
+      timestamp: timestamp,
       payload: Enum.map(payloads, &encode_payload/1),
     })
   end

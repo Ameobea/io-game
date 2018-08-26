@@ -1,6 +1,6 @@
 defmodule BackendWeb.GameChannel do
   use Phoenix.Channel
-  alias BackendWeb.{GameState, GameLoop}
+  alias BackendWeb.{GameState, GameLoop, GameConf}
 
   alias Backend.ProtoMessage
   alias Backend.ProtoMessage.{
@@ -66,7 +66,7 @@ defmodule BackendWeb.GameChannel do
               entity: {
                 :player,
                 PlayerEntity.new(%{
-                  size: 20, # TODO: read from config
+                  size: GameConf.get_config("game", "defaultPlayerSize") |> Kernel.trunc
                 }),
               },
             }),

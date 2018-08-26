@@ -20,7 +20,7 @@ use protos::server_messages::{
 };
 use render_effects::RenderEffectManager;
 use user_input::CurHeldKeys;
-use util::{error, warn, CircularBuffer};
+use util::{error, log, warn, CircularBuffer};
 
 pub static mut STATE: *mut GameState = ptr::null_mut();
 pub static mut EFFECTS_MANAGER: *mut RenderEffectManager = ptr::null_mut();
@@ -43,6 +43,7 @@ pub fn get_cur_held_keys() -> &'static mut CurHeldKeys {
 }
 
 pub struct GameState {
+    pub initial_tick: u32,
     pub cur_tick: u32,
     pub player_uuid: Uuid,
     pub world: PhysicsWorld<ClientState>,
@@ -52,6 +53,7 @@ pub struct GameState {
 impl GameState {
     pub fn new() -> Self {
         GameState {
+            initial_tick: 0,
             cur_tick: 0,
             player_uuid: Uuid::nil(), // Placeholder until we are assigned an ID by the server
             world: PhysicsWorld::new(),
@@ -60,6 +62,13 @@ impl GameState {
     }
 
     pub fn queue_msg(&mut self, msg: ServerMessage) {
+        // We want to apply the first message we receive (the connect message) immediately
+        if self.cur_tick == 0 || msg.tick == self.initial_tick {
+            self.initial_tick = msg.tick;
+            self.apply_msg(msg);
+            return;
+        }
+
         self.msg_buffer.push(msg);
     }
 
@@ -95,11 +104,14 @@ impl GameState {
 
                 // It's possible this is the first snapshot, so start listening for mouse/keyoard
                 // events now that we have a user entity in the snapshot.
+                log("Initializing input handlers");
                 init_input_handlers();
             }
             ServerMessageContent::connect_successful(player_id) => {
                 let player_id: Uuid = player_id.into();
                 self.player_uuid = player_id;
+                log(format!("Setting initial tick: {}", tick));
+                self.cur_tick = tick;
             }
             ServerMessageContent::movement_update(ref movement_update) => {
                 let (pos, velocity) = movement_update.into();

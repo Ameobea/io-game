@@ -6,12 +6,12 @@ defmodule BackendWeb.GameLoop do
   alias Backend.ProtoMessage
   alias Backend.ProtoMessage.{ServerMessage, Point2}
 
-  @timedelay 16
+  @timedelay 18
   @nanoseconds_to_seconds 1_000_000_000
 
   def init(_) do
     start_tick()
-    {:ok, {0, get_time(), %{}}}
+    {:ok, %{}}
   end
 
   def start_link() do
@@ -27,32 +27,28 @@ defmodule BackendWeb.GameLoop do
     {:noreply, run_tick(state)}
   end
 
-  def handle_call({:handle_message, topic, new_message}, _from, {tick, time, messages}) do
+  def handle_call({:handle_message, topic, new_message}, _from, messages) do
     diff = NativePhysics.UserDiff.new(new_message)
-    {
-      :reply,
-      nil,
-      {
-        tick,
-        time,
-        Map.put(messages, topic, [diff | Map.get(messages, topic, [])])
-      }
-    }
+    { :reply, nil, Map.put(messages, topic, [diff | Map.get(messages, topic, [])]) }
   end
 
-  defp run_tick({tick, prev_time, messages}) do
-    curr_time = get_time()
-    time_difference = (curr_time - prev_time) / @nanoseconds_to_seconds
+  defp run_tick(messages) do
+    {_, prev_time} = GameState.get_cur_tick_info
+    {cur_tick, cur_time} = GameState.incr_tick
+    time_difference = (cur_time - prev_time) / @nanoseconds_to_seconds
 
-    GameState.list_topics()
-    |> update_topics(tick, time_difference, messages)
+    topics = GameState.list_topics()
 
-    {tick + 1, curr_time, %{}}
+    topics |> update_topics(cur_tick, time_difference, messages)
+
+    %{}
   end
 
   defp update_topics([], _tick, _time_diff, _messages), do: nil
   defp update_topics([topic | rest], tick, time_diff, messages) do
-    GameState.update_topic(topic, &update_topic(topic, &1, tick, time_diff, Map.get(messages, topic, [])))
+    topic_state = GameState.get_topic(topic)
+    updated_topic = update_topic(topic, topic_state, tick, time_diff, Map.get(messages, topic, []))
+    GameState.set_topic(topic, updated_topic)
 
     update_topics(rest, tick, time_diff, messages)
   end
@@ -142,6 +138,4 @@ defmodule BackendWeb.GameLoop do
   defp start_tick() do
     Process.send_after(self(), :tick, @timedelay)
   end
-
-  defp get_time(), do: System.system_time
 end

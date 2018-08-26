@@ -138,7 +138,7 @@ impl<T: Default> CircularBuffer<T> {
 
 impl<T: Clone + Default> CircularBuffer<T> {
     pub fn pop_clone(&mut self) -> Option<T> {
-        if self.front == self.back {
+        if self.front == self.back && !self.full {
             None
         } else {
             let item = self.data[self.back].clone();
