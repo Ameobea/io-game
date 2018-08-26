@@ -1,6 +1,7 @@
 defmodule BackendWeb.GameLoop do
   use GenServer
   alias BackendWeb.GameState
+  alias BackendWeb.GameConf
   alias NativePhysics
   alias Backend.ProtoMessage
   alias Backend.ProtoMessage.{ServerMessage, Point2}
@@ -58,8 +59,9 @@ defmodule BackendWeb.GameLoop do
 
   defp update_topic(topic, topic_state, tick, time_diff, player_inputs) do
     # TODO: rather than reversing player inputs here, just push them to the front of the buffer
-    update_all = rem(tick, 15) == 0 # Send full snapshot every 3 ticks ~(50ms)
-    updates = NativePhysics.tick(player_inputs |> Enum.reverse, update_all)
+    snapshot_tick_interval = GameConf.get_config("network", "snapshotTickInterval")
+    send_snapshot = rem(tick, snapshot_tick_interval) == 0
+    updates = NativePhysics.tick(player_inputs |> Enum.reverse, send_snapshot)
     if is_list(updates) do
       payload = updates
         |> Enum.map(&handle_update/1)

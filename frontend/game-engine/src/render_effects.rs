@@ -3,7 +3,7 @@
 pub trait RenderEffect {
     /// Given the current tick iteration, triggers the effect to render.  If `true` is returned,
     /// the effect will be deleted and never rendered again.
-    fn tick_and_render(&mut self, tick: usize) -> bool;
+    fn tick_and_render(&mut self, tick: u32) -> bool;
 }
 
 pub struct RenderEffectManager {
@@ -17,7 +17,7 @@ impl RenderEffectManager {
         }
     }
 
-    pub fn render_all(&mut self, tick: usize) {
+    pub fn render_all(&mut self, tick: u32) {
         let mut offset = 0;
         for i in 0..self.effects.len() {
             let should_remove = {

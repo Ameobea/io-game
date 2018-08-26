@@ -3,25 +3,13 @@ use std::hint::unreachable_unchecked;
 use nalgebra::Point2;
 use wasm_bindgen::prelude::*;
 
-use game::effects::DemoCircle;
-use game_state::{get_cur_held_keys, get_effects_manager, get_state};
+use game_state::{get_cur_held_keys, get_state};
 use proto_utils::send_user_message;
 use protos::client_messages::{BeamAim, ClientMessage_oneof_payload as ClientMessageContent};
 use protos::message_common::MovementDirection as Direction;
-use util::Color;
 
 #[wasm_bindgen]
-pub fn handle_mouse_down(x: u16, y: u16) {
-    let effect = DemoCircle {
-        color: Color::random(),
-        width: 2,
-        pos: Point2::new(x as f32, y as f32),
-        cur_size: 0.,
-        max_size: 10.,
-        increment: 3.4,
-    };
-    get_effects_manager().add_effect(box effect);
-
+pub fn handle_mouse_down(_x: u16, _y: u16) {
     get_state().get_player_entity_mut().0.beam_on = true;
 
     // Send a "beam on" message to the server

@@ -74,7 +74,7 @@ pub fn apply_update(
     }
 }
 
-pub fn tick(_entity: &mut Entity, _client_state: &mut ClientState, _cur_tick: usize) {}
+pub fn tick(_entity: &mut Entity, _client_state: &mut ClientState, _cur_tick: u32) {}
 
 fn transform_points(pts: &[Point2<f32>], isometry: &Isometry2<f32>) -> Vec<f32> {
     let mut buf = Vec::with_capacity(pts.len() * 2);
@@ -107,7 +107,7 @@ fn unmatched_state(entity: &Entity, client_state: &ClientState) -> ! {
     }
 }
 
-pub fn render(entity: &Entity, client_state: &ClientState, pos: &Isometry2<f32>, cur_tick: usize) {
+pub fn render(entity: &Entity, client_state: &ClientState, pos: &Isometry2<f32>, cur_tick: u32) {
     match (entity, client_state) {
         (Entity::Asteroid(AsteroidEntity { vertices }), ClientState::Asteroid { color }) => {
             let transformed = transform_points(&vertices, pos);
@@ -124,7 +124,7 @@ pub fn render(entity: &Entity, client_state: &ClientState, pos: &Isometry2<f32>,
     }
 }
 
-fn render_player(player: &PlayerEntity, pos: &Isometry2<f32>, color: &Color, cur_tick: usize) {
+fn render_player(player: &PlayerEntity, pos: &Isometry2<f32>, color: &Color, cur_tick: u32) {
     let PlayerEntity {
         size,
         beam_aim,

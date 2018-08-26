@@ -27,9 +27,15 @@ defmodule BackendWeb.GameConf do
     Agent.get(__MODULE__, fn {loaded, _} -> loaded end)
   end
 
-  def get_config(key) do
+  def get_config(category) do
     if !config_loaded?, do: load_config
 
-    Agent.get(__MODULE__, fn {_, conf} -> Map.get(conf, key) end)
+    Agent.get(__MODULE__, fn {_, conf} -> Map.get(conf, category) end)
+  end
+
+  def get_config(category, key) do
+    if !config_loaded?, do: load_config
+
+    Agent.get(__MODULE__, fn {_, conf} -> Map.get(conf, category) |> Map.get(key) end)
   end
 end

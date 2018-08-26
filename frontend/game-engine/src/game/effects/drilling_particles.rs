@@ -5,8 +5,8 @@ use util::{math_random, Color};
 
 pub struct DrillingParticles {
     pos: Point2<f32>,
-    dur_ticks: usize,
-    start_tick: usize,
+    dur_ticks: u32,
+    start_tick: u32,
     /// Particle velocity in px/tick
     particle_velocity: f32,
     particle_vectors: Vec<Vector2<f32>>,
@@ -16,8 +16,8 @@ pub struct DrillingParticles {
 impl DrillingParticles {
     pub fn new(
         pos: Point2<f32>,
-        cur_tick: usize,
-        dur_ticks: usize,
+        cur_tick: u32,
+        dur_ticks: u32,
         particle_count: usize,
         particle_velocity: f32,
         color: Color,
@@ -42,7 +42,7 @@ impl DrillingParticles {
 }
 
 impl RenderEffect for DrillingParticles {
-    fn tick_and_render(&mut self, cur_tick: usize) -> bool {
+    fn tick_and_render(&mut self, cur_tick: u32) -> bool {
         for dir in &self.particle_vectors {
             let adjusted_pos =
                 self.pos + (self.particle_velocity * (cur_tick - self.start_tick) as f32 * dir);
