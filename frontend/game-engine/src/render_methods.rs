@@ -2,6 +2,8 @@ use nalgebra::Point2;
 
 use util::Color;
 
+pub use super::clear_canvas;
+
 #[inline(always)]
 pub fn render_quad(color: &Color, pos: Point2<f32>, width: u16, height: u16) {
     super::render_quad(

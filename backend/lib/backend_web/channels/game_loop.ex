@@ -6,7 +6,7 @@ defmodule BackendWeb.GameLoop do
   alias Backend.ProtoMessage
   alias Backend.ProtoMessage.{ServerMessage, Point2}
 
-  @timedelay 18
+  @timedelay 17
   @nanoseconds_to_seconds 1_000_000_000
 
   def init(_) do

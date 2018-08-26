@@ -4,7 +4,7 @@
   "phoenixTag": "game",
   "gameChannelName": "rooms:game",
   "customEventName": "game",
-  "messageBufferSize": 100,
+  "messageBufferSize": 30,
   "renderDelayTicks": 6,
   "snapshotTickInterval": 3
 }

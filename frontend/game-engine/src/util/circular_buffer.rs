@@ -79,9 +79,7 @@ impl<T: Default> CircularBuffer<T> {
         self.data[self.front] = item;
         self.front = self.next_index(self.front);
 
-        if self.front == self.back {
-            self.full = true
-        }
+        self.full = self.front == self.back;
     }
 
     pub fn pop<'a>(&'a mut self) -> Option<&'a T> {
@@ -134,6 +132,10 @@ impl<T: Default> CircularBuffer<T> {
             }
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.front == self.back && !self.full
+    }
 }
 
 impl<T: Clone + Default> CircularBuffer<T> {
@@ -143,6 +145,7 @@ impl<T: Clone + Default> CircularBuffer<T> {
         } else {
             let item = self.data[self.back].clone();
             self.back = self.next_index(self.back);
+            self.full = false;
             Some(item)
         }
     }

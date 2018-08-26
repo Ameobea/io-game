@@ -19,6 +19,7 @@ use protos::server_messages::{
     StatusUpdate_oneof_payload as StatusPayload,
 };
 use render_effects::RenderEffectManager;
+use render_methods::clear_canvas;
 use user_input::CurHeldKeys;
 use util::{error, log, warn, CircularBuffer};
 
@@ -62,6 +63,7 @@ impl GameState {
     }
 
     pub fn queue_msg(&mut self, msg: ServerMessage) {
+        // log(format!("Q MSG: {}", msg.tick));
         // We want to apply the first message we receive (the connect message) immediately
         if self.cur_tick == 0 || msg.tick == self.initial_tick {
             self.initial_tick = msg.tick;
@@ -69,6 +71,9 @@ impl GameState {
             return;
         }
 
+        // TODO: Figure out if we're overwriting queue items and, if so, request a snapshot.
+        // If there were entity creation events going on that get overwritten, it's not going to be
+        // a fun time.
         self.msg_buffer.push(msg);
     }
 
@@ -155,6 +160,20 @@ impl GameState {
     /// without taking input from the server.  This method iterates over all entities and
     /// optionally performs this mutation before rendering.  Returns the current tick.
     pub fn tick(&mut self) -> u32 {
+        // log(format!("TICK: {}", self.cur_tick));
+        // Skip rendering if we have no new ticks to render
+        if self.msg_buffer.is_empty() {
+            return self.cur_tick;
+        } else {
+            let last_index = self.msg_buffer.len() - 1;
+            let newest_msg_tick = self.msg_buffer.get(last_index).unwrap().tick;
+
+            // There was a huge gap; we have to skip a ton of ticks to catch up
+            if newest_msg_tick > (self.cur_tick + 20) {
+                self.cur_tick = newest_msg_tick + CONF.network.render_delay_ticks;
+            }
+        }
+
         // This is the tick that we're going to be rendering.  It is set in the past so that the
         // chance that any necessary messages were missed is reduced.
         let target_tick = self.cur_tick - CONF.network.render_delay_ticks;
@@ -162,15 +181,23 @@ impl GameState {
         // Pop a message out of the buffer if it has a tick matching this current tick.
         // WebSocket messages are guarenteed to be ordered, so there really shouldn't be the
         // potential for our messages to not be ordered.
-        if let Some(msg) = self.msg_buffer.get(0) {
-            if msg.tick == target_tick {
+        let orig_tick = self.cur_tick;
+        while let Some(msg) = self.msg_buffer.get(0) {
+            if msg.tick <= target_tick {
                 let msg = self.msg_buffer.pop_clone().unwrap();
                 self.apply_msg(msg);
+                self.cur_tick += 1;
+            } else {
+                break;
             }
+        }
+        if self.cur_tick == orig_tick {
+            self.cur_tick += 1;
         }
 
         self.world.step();
 
+        clear_canvas();
         for (
             _,
             EntityHandles {
@@ -196,7 +223,6 @@ impl GameState {
             render(entity, client_state, &pos, self.cur_tick);
         }
 
-        self.cur_tick += 1;
         self.cur_tick
     }
 

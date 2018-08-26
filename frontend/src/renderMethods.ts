@@ -17,7 +17,7 @@ const { ctx2D, ctx2DBackground } = (() => {
 ctx2D.shadowOffsetX = 0;
 ctx2D.shadowOffsetY = 0;
 
-export const clearCanvas = () => ctx2D.clearRect(0, 0, canvas2D.width, canvas2D.height);
+export const clear_canvas = () => ctx2D.clearRect(0, 0, canvas2D.width, canvas2D.height);
 
 export const render_quad = (
   r: number,

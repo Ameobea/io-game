@@ -1,5 +1,4 @@
 const wasm = import('./game_engine');
-import { clearCanvas } from './renderMethods';
 import { initWebGL } from './webgl';
 
 export const timer = timeMs => new Promise(f => setTimeout(f, timeMs));
@@ -35,7 +34,6 @@ wasm
     handleWsMsg = (ab: ArrayBuffer) => engine.handle_channel_message(new Uint8Array(ab));
 
     tick = () => {
-      clearCanvas();
       engine.tick();
       requestAnimationFrame(tick);
     };

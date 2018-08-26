@@ -49,6 +49,6 @@ impl RenderEffect for DrillingParticles {
             render_point(&self.color, adjusted_pos);
         }
 
-        self.start_tick + self.dur_ticks == cur_tick
+        self.start_tick + self.dur_ticks >= cur_tick
     }
 }

@@ -57,6 +57,7 @@ extern "C" {
 
 #[wasm_bindgen(module = "./renderMethods")]
 extern "C" {
+    pub fn clear_canvas();
     pub fn render_quad(r: u8, g: u8, b: u8, x: u16, y: u16, width: u16, height: u16);
     pub fn render_arc(
         r: u8,
