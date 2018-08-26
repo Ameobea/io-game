@@ -14,6 +14,7 @@ defmodule Backend.Application do
       # worker(Backend.Worker, [arg1, arg2, arg3]),
       worker(BackendWeb.GameState, []),
       worker(BackendWeb.GameLoop, []),
+      worker(BackendWeb.GameConf, []),
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

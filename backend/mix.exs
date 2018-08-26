@@ -42,6 +42,7 @@ defmodule Backend.Mixfile do
       {:uuid, "~> 1.1"},
       {:exprotobuf, "~> 1.2.9"},
       {:rustler, "~> 0.18.0"},
+      {:jason, "~> 1.1"},
     ]
   end
 

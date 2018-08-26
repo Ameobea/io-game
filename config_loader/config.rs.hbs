@@ -19,6 +19,7 @@ pub struct NetworkConf {
     pub phoenix_tag: &'static str,
     pub custom_event_name: &'static str,
     pub message_buffer_size: usize,
+    pub render_delay_ticks: usize,
 }
 
 pub struct GameConf {
@@ -46,6 +47,7 @@ pub const CONF: Conf = Conf {
         phoenix_tag: "{{ network-phoenixTag }}",
         custom_event_name: "{{ network-customEventName }}",
         message_buffer_size: {{ network-messageBufferSize }},
+        render_delay_ticks: {{ network-renderDelayTicks }},
     },
     game: GameConf {
         world_min_x: {{ f32 game-worldMinX }},

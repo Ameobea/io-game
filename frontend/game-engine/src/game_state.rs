@@ -143,6 +143,22 @@ impl GameState {
     /// without taking input from the server.  This method iterates over all entities and
     /// optionally performs this mutation before rendering.  Returns the current tick.
     pub fn tick(&mut self) -> usize {
+        // This is the tick that we're going to be rendering.  It is set in the past so that the
+        // chance that any necessary messages were missed is reduced.
+        let target_tick = self.cur_tick - CONF.network.render_delay_ticks;
+
+        // Pop a message out of the buffer if it has a tick matching this current tick.
+        // WebSocket messages are guarenteed to be ordered, so there really shouldn't be the
+        // potential for our messages to not be ordered.
+        if let Some(msg) = self.msg_buffer.get(0) {
+            if msg.tick != target_tick {
+                break;
+            }
+
+            let msg = self.msg_buffer.pop_clone(0);
+            self.apply_msg(msg);
+        }
+
         self.world.step();
 
         for (
