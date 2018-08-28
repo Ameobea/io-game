@@ -67,6 +67,9 @@ pub mod atoms {
 
 #[cfg(feature = "elixir-interop")]
 pub mod ext {
+    use std::thread;
+    use std::time::Duration;
+
     use rustler::error::Error as NifError;
     use rustler::schedule::SchedulerFlags;
     use rustler::types::{atom::Atom, ListIterator};
@@ -82,7 +85,7 @@ pub mod ext {
         "Elixir.NativePhysics",
         [
             ("spawn_user", 1, spawn_user),
-            ("tick", 2, tick, SchedulerFlags::DirtyCpu),
+            ("tick", 3, tick, SchedulerFlags::DirtyCpu),
             ("get_snapshot", 0, super::physics::server::get_snapshot)
         ],
         None
@@ -132,6 +135,9 @@ pub mod ext {
     pub fn tick<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
         let diffs_iterator: ListIterator = args[0].decode()?;
         let update_all: bool = args[1].decode()?;
+        let delay_us: u64 = args[2].decode()?;
+
+        thread::sleep(Duration::from_micros(delay_us));
 
         let diffs: Vec<InternalUserDiff> = diffs_iterator
             .map(|diff| -> NifResult<UserDiff<'a>> { diff.decode() })

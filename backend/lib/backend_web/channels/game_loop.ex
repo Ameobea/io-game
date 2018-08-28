@@ -2,12 +2,14 @@ defmodule BackendWeb.GameLoop do
   use GenServer
   alias BackendWeb.GameState
   alias BackendWeb.GameConf
+  alias BackendWeb.NativePhysicsServer
   alias NativePhysics
   alias Backend.ProtoMessage
   alias Backend.ProtoMessage.{ServerMessage, Point2}
 
-  @timedelay 17
+  @ticks_per_second 60
   @nanoseconds_to_seconds 1_000_000_000
+  @microseconds_per_second 1_000_000
 
   def init(_) do
     start_tick()
@@ -23,7 +25,6 @@ defmodule BackendWeb.GameLoop do
   end
 
   def handle_info(:tick, state) do
-    start_tick()
     {:noreply, run_tick(state)}
   end
 
@@ -33,31 +34,42 @@ defmodule BackendWeb.GameLoop do
   end
 
   defp run_tick(messages) do
-    {_, prev_time} = GameState.get_cur_tick_info
-    {cur_tick, cur_time} = GameState.incr_tick
-    time_difference = (cur_time - prev_time) / @nanoseconds_to_seconds
-
+    {cur_tick, prev_tick_time} = GameState.get_cur_tick_info
     topics = GameState.list_topics()
-
-    topics |> update_topics(cur_tick, time_difference, messages)
+    update_topics(topics, cur_tick, prev_tick_time, messages)
+    {_next_tick, _cur_time} = GameState.incr_tick
 
     %{}
   end
 
-  defp update_topics([], _tick, _time_diff, _messages), do: nil
-  defp update_topics([topic | rest], tick, time_diff, messages) do
-    topic_state = GameState.get_topic(topic)
-    updated_topic = update_topic(topic, topic_state, tick, time_diff, Map.get(messages, topic, []))
-    GameState.set_topic(topic, updated_topic)
-
-    update_topics(rest, tick, time_diff, messages)
+  defp update_topics([], _tick, _prev_tick_time, _messages) do
+    Process.send_after(self(), :tick, 16)
   end
 
-  defp update_topic(topic, topic_state, tick, time_diff, player_inputs) do
-    # TODO: rather than reversing player inputs here, just push them to the front of the buffer
+  defp update_topics([topic | rest], tick, prev_tick_time, messages) do
+    topic_state = GameState.get_topic(topic)
+    update_topic(topic, topic_state, tick, prev_tick_time, Map.get(messages, topic, []))
+    GameState.set_topic(topic, topic_state)
+
+    update_topics(rest, tick, prev_tick_time, messages)
+  end
+
+  defp update_topic(topic, topic_state, tick, prev_tick_time, player_inputs) do
     snapshot_tick_interval = GameConf.get_config("network", "snapshotTickInterval")
     send_snapshot = rem(tick, snapshot_tick_interval) == 0
-    updates = NativePhysics.tick(player_inputs |> Enum.reverse, send_snapshot)
+    time_diff_us = (System.system_time / 1000.0) - (prev_tick_time / 1000.0)
+    desired_delay_us = @microseconds_per_second / @ticks_per_second
+    delay_us = desired_delay_us - time_diff_us
+    delay_us = if delay_us < 0 do
+      0
+    else
+      Kernel.trunc delay_us
+    end
+
+    spawn NativePhysicsServer, :tick, [player_inputs |> Enum.reverse, send_snapshot, delay_us, topic]
+  end
+
+  def handle_updates(updates, topic) do
     if is_list(updates) do
       payload = updates
         |> Enum.map(&handle_update/1)
@@ -67,10 +79,13 @@ defmodule BackendWeb.GameLoop do
         BackendWeb.Endpoint.broadcast! topic, "tick", %{response: payload}
       end
     else
-      IO.inspect(["PHYSICS ENGINE ERROR", player_inputs, updates])
+      IO.inspect(["PHYSICS ENGINE ERROR", updates])
     end
 
-    topic_state
+    # TODO: This is only valid if we have a single topic.  If we have multiple topics, we will
+    # need to emulate a `Promise.all` and keep track of how many of these have finished before
+    # starting the next tick.  So damned annoying...
+    start_tick
   end
 
   defp handle_update(%NativePhysics.Update{
@@ -136,6 +151,6 @@ defmodule BackendWeb.GameLoop do
   end
 
   defp start_tick() do
-    Process.send_after(self(), :tick, @timedelay)
+    Process.send_after(self(), :tick, 0)
   end
 end

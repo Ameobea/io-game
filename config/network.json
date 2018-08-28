@@ -6,5 +6,5 @@
   "customEventName": "game",
   "messageBufferSize": 30,
   "renderDelayTicks": 6,
-  "snapshotTickInterval": 3
+  "snapshotTickInterval": 2
 }
