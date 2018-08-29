@@ -1,6 +1,7 @@
 defmodule BackendWeb.GameState do
   use GenServer
 
+  @spec init(any()) :: {:ok, {%{}, 0, any()}}
   def init(_) do
     {:ok, {%{}, 0, get_time()}}
   end
@@ -18,26 +19,32 @@ defmodule BackendWeb.GameState do
     GenServer.call(__MODULE__, {:track_player, topic, player_id, initial_state})
   end
 
+  @spec update_topic(String.t(), (map -> map)) :: any()
   def update_topic(topic, update_fn) do
     GenServer.call(__MODULE__, {:update_topic, topic, update_fn})
   end
 
+  @spec set_topic(String.t(), map()) :: nil
   def set_topic(topic, topic_state) do
     GenServer.call(__MODULE__, {:set_topic, topic, topic_state})
   end
 
+  @spec get_topic(String.t()) :: any()
   def get_topic(topic) do
     GenServer.call(__MODULE__, {:get_topic, topic})
   end
 
+  @spec list_topics() :: [String.t]
   def list_topics() do
     GenServer.call(__MODULE__, :list_topics)
   end
 
+  @spec get_cur_tick_info() :: {integer(), float()}
   def get_cur_tick_info() do
     GenServer.call(__MODULE__, :get_cur_tick_info)
   end
 
+  @spec incr_tick() :: {integer(), float()}
   def incr_tick() do
     GenServer.call(__MODULE__, :incr_tick)
   end
@@ -68,7 +75,7 @@ defmodule BackendWeb.GameState do
     {:reply, {tick, timestamp}, {topics, tick, timestamp}}
   end
 
-  def handle_call(:incr_tick, _from, {topics, tick, timestamp}) do
+  def handle_call(:incr_tick, _from, {topics, tick, _timestamp}) do
     new_tick = tick + 1
     new_timestamp = get_time()
 

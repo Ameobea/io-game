@@ -8,7 +8,6 @@ defmodule BackendWeb.GameLoop do
   alias Backend.ProtoMessage.{ServerMessage, Point2}
 
   @ticks_per_second 60
-  @nanoseconds_to_seconds 1_000_000_000
   @microseconds_per_second 1_000_000
 
   def init(_) do
@@ -36,56 +35,66 @@ defmodule BackendWeb.GameLoop do
   defp run_tick(messages) do
     {cur_tick, prev_tick_time} = GameState.get_cur_tick_info
     topics = GameState.list_topics()
-    update_topics(topics, cur_tick, prev_tick_time, messages)
-    {_next_tick, _cur_time} = GameState.incr_tick
+    if Enum.empty?(topics) do
+      Process.send_after(self(), :tick, 16)
+    else
+      update_topics(topics, cur_tick, prev_tick_time, messages)
+    end
 
     %{}
   end
 
-  defp update_topics([], _tick, _prev_tick_time, _messages) do
-    Process.send_after(self(), :tick, 16)
-  end
-
+  defp update_topics([], _tick, _prev_tick_time, _messages), do: nil
   defp update_topics([topic | rest], tick, prev_tick_time, messages) do
     topic_state = GameState.get_topic(topic)
-    update_topic(topic, topic_state, tick, prev_tick_time, Map.get(messages, topic, []))
+    messages_for_topic = Map.get(messages, topic, [])
+    update_topic(topic, topic_state, tick, prev_tick_time, messages_for_topic)
     GameState.set_topic(topic, topic_state)
 
     update_topics(rest, tick, prev_tick_time, messages)
   end
 
-  defp update_topic(topic, topic_state, tick, prev_tick_time, player_inputs) do
-    snapshot_tick_interval = GameConf.get_config("network", "snapshotTickInterval")
+  defp update_topic(topic, _topic_state, tick, prev_tick_time, player_inputs) do
+    snapshot_tick_interval = GameConf.get_config "network", "snapshotTickInterval"
     send_snapshot = rem(tick, snapshot_tick_interval) == 0
     time_diff_us = (System.system_time / 1000.0) - (prev_tick_time / 1000.0)
     desired_delay_us = @microseconds_per_second / @ticks_per_second
-    delay_us = desired_delay_us - time_diff_us
+    delay_us = desired_delay_us - time_diff_us - 400.0
     delay_us = if delay_us < 0 do
       0
     else
       Kernel.trunc delay_us
     end
 
-    spawn NativePhysicsServer, :tick, [player_inputs |> Enum.reverse, send_snapshot, delay_us, topic]
+    spawn NativePhysicsServer, :tick, [Enum.reverse(player_inputs), send_snapshot, delay_us, topic]
   end
 
+  @spec handle_updates([UserDiff], String.t()) :: nil
   def handle_updates(updates, topic) do
-    if is_list(updates) do
+    if is_list updates do
       payload = updates
         |> Enum.map(&handle_update/1)
         |> Enum.filter(& !is_nil(&1))
 
-      if Enum.count(payload) > 0 do
+      if !Enum.empty? payload do
         BackendWeb.Endpoint.broadcast! topic, "tick", %{response: payload}
       end
     else
-      IO.inspect(["PHYSICS ENGINE ERROR", updates])
+      IO.inspect ["PHYSICS ENGINE ERROR", updates]
     end
 
     # TODO: This is only valid if we have a single topic.  If we have multiple topics, we will
     # need to emulate a `Promise.all` and keep track of how many of these have finished before
     # starting the next tick.  So damned annoying...
-    start_tick
+    {next_tick, cur_time} = GameState.incr_tick
+    start_tick()
+  end
+
+  defp construct_payload(id, inner_payload) do
+    ServerMessage.Payload.new(%{
+      id: ProtoMessage.to_proto_uuid(id),
+      payload: inner_payload,
+    })
   end
 
   defp handle_update(%NativePhysics.Update{
@@ -97,13 +106,7 @@ defmodule BackendWeb.GameLoop do
       |> Map.from_struct
       |> Backend.ProtoMessage.MovementUpdate.new
 
-    ServerMessage.Payload.new(%{
-      id: ProtoMessage.to_proto_uuid(id),
-      payload: {
-        :movement_update,
-        internal_movement_update,
-      }
-    })
+    construct_payload id, { :movement_update, internal_movement_update }
   end
 
   defp handle_update(%NativePhysics.Update{
@@ -111,13 +114,7 @@ defmodule BackendWeb.GameLoop do
     update_type: :player_movement,
     payload: payload,
   }) do
-    ServerMessage.Payload.new(%{
-      id: ProtoMessage.to_proto_uuid(id),
-      payload: {
-        :player_input,
-        payload
-      }
-    })
+    construct_payload id, { :player_input, payload }
   end
 
   defp handle_update(%NativePhysics.Update{
@@ -125,13 +122,7 @@ defmodule BackendWeb.GameLoop do
     update_type: :beam_toggle,
     payload: payload,
   }) do
-    ServerMessage.Payload.new(%{
-      id: ProtoMessage.to_proto_uuid(id),
-      payload: {
-        :beam_toggle,
-        payload
-      }
-    })
+    construct_payload id, { :beam_toggle, payload }
   end
 
   defp handle_update(%NativePhysics.Update{
@@ -139,10 +130,7 @@ defmodule BackendWeb.GameLoop do
     update_type: :beam_aim,
     payload: payload,
   }) do
-    ServerMessage.Payload.new(%{
-      id: ProtoMessage.to_proto_uuid(id),
-      payload: { :beam_aim, Point2.new(payload) }
-    })
+    construct_payload id, { :beam_aim, Point2.new(payload) }
   end
 
   defp handle_update(unmatched) do
@@ -151,6 +139,7 @@ defmodule BackendWeb.GameLoop do
   end
 
   defp start_tick() do
-    Process.send_after(self(), :tick, 0)
+    IO.puts("Start tick")
+    Process.send_after(__MODULE__, :tick, 0)
   end
 end

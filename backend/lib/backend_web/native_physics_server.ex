@@ -19,8 +19,8 @@ defmodule BackendWeb.NativePhysicsServer do
   end
 
   def handle_call({:tick, player_inputs, send_snapshot, delay_us, topic}, _from, nil) do
-    updates = NativePhysics.tick(player_inputs, send_snapshot, delay_us)
-    GameLoop.handle_updates(updates, topic)
+    updates = NativePhysics.tick player_inputs, send_snapshot, delay_us
+    GameLoop.handle_updates updates, topic
     {:reply, nil, nil}
   end
 

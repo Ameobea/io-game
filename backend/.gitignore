@@ -16,3 +16,4 @@ erl_crash.dump
 /config/*.secret.exs
 
 priv/native/libnative_physics.so
+.elixir_ls

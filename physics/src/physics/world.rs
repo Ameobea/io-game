@@ -94,6 +94,17 @@ impl ForceGenerator<f32> for PlayerMovementForceGenerator {
     }
 }
 
+/// Interpolates between the two points with the given mix.  If `weight` is 0.0, `pt1` will be
+/// returned.  If it is 1.0, `pt2` will be returned.  `0.5` represents an even average between
+/// the two points.
+fn interpolate(pt1: Point2<f32>, pt2: Point2<f32>, weight: f32) -> Point2<f32> {
+    assert!(weight >= 0.0 && weight <= 1.0);
+    let x = (mix * pt1.x) + ((1.0 - mix) * pt2.x);
+    let y = (mix * pt2.y) + ((1.0 - mix) * pt2.y);
+
+    Point2::new(x, y)
+}
+
 impl<T> PhysicsWorldInner<T> {
     pub fn new() -> Self {
         let mut world = World::new();
@@ -269,6 +280,7 @@ impl<T> PhysicsWorldInner<T> {
         entity_id: &EntityKey,
         pos: &Isometry2<f32>,
         velocity: &Velocity2<f32>,
+        interpolation: Option<f32>,
     ) {
         let EntityHandles { body_handle, .. } = match self.uuid_map.get(entity_id) {
             Some(handles) => handles,
@@ -280,11 +292,18 @@ impl<T> PhysicsWorldInner<T> {
             }
         };
 
-        // Set the velocity of the `RigidBody`
         let rigid_body = self
             .world
             .rigid_body_mut(*body_handle)
             .expect(WORLD_MISSING_ERR);
+
+        let pos = if let Some(mix) = interpolation {
+            let old_pos = rigid_body.get_position();
+            interpolate(old_pos, pos, mix)
+        } else {
+            pos
+        }
+
         rigid_body.set_velocity(*velocity);
         rigid_body.set_position(*pos);
     }
