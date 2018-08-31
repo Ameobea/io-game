@@ -6,7 +6,7 @@ import { getCanvas } from './renderMethods';
 import { continueInit, handleWsMsg, getEngine } from './index';
 
 const wsUrl = `ws://${window.location.hostname}${
-  process.env.WEBPACK_MODE === 'production' ? '' : ':4000'
+  window.location.hostname == 'localhost' ? ':4000' : ''
 }/socket/websocket?vsn=1.0.0`;
 const gameSocket = new WebSocket(wsUrl);
 

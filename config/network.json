@@ -6,5 +6,6 @@
   "customEventName": "game",
   "messageBufferSize": 30,
   "renderDelayTicks": 6,
-  "snapshotTickInterval": 2
+  "snapshotTickInterval": 2,
+  "playerPositionInterpolationRatio": 0.5
 }

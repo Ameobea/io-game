@@ -124,7 +124,7 @@ impl GameState {
                 // If this is the player entity, interpolate between the position we've calculated
                 // internally (taking into account movement updates that were applied instantly)
                 let mix = if entity_id == self.player_uuid {
-                    Some(0.5)
+                    Some(CONF.network.player_interpolation_mix)
                 } else {
                     None
                 };

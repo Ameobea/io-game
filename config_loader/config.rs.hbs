@@ -20,6 +20,7 @@ pub struct NetworkConf {
     pub custom_event_name: &'static str,
     pub message_buffer_size: usize,
     pub render_delay_ticks: u32,
+    pub player_interpolation_mix: f32,
 }
 
 pub struct GameConf {
@@ -48,6 +49,7 @@ pub const CONF: Conf = Conf {
         custom_event_name: "{{ network-customEventName }}",
         message_buffer_size: {{ network-messageBufferSize }},
         render_delay_ticks: {{ network-renderDelayTicks }},
+        player_interpolation_mix: {{ f32 network-playerPositionInterpolationRatio }},
     },
     game: GameConf {
         world_min_x: {{ f32 game-worldMinX }},
