@@ -120,8 +120,17 @@ impl GameState {
             }
             ServerMessageContent::movement_update(ref movement_update) => {
                 let (pos, velocity) = movement_update.into();
+
+                // If this is the player entity, interpolate between the position we've calculated
+                // internally (taking into account movement updates that were applied instantly)
+                let mix = if entity_id == self.player_uuid {
+                    Some(0.5)
+                } else {
+                    None
+                };
+
                 // Update the entity's position and velocity on the underlying `PhysicsWorld`
-                self.world.update_movement(&entity_id, &pos, &velocity);
+                self.world.update_movement(&entity_id, &pos, &velocity, mix);
             }
             _ => {
                 let EntityHandles {
@@ -160,7 +169,6 @@ impl GameState {
     /// without taking input from the server.  This method iterates over all entities and
     /// optionally performs this mutation before rendering.  Returns the current tick.
     pub fn tick(&mut self) -> u32 {
-        // log(format!("TICK: {}", self.cur_tick));
         // Skip rendering if we have no new ticks to render
         if self.msg_buffer.is_empty() {
             return self.cur_tick;
@@ -195,11 +203,20 @@ impl GameState {
             self.cur_tick += 1;
         }
 
+        // Tick the player entity specially before the tick so that any super-recent movement
+        // updates are taken into account immediately
+        let EntityHandles {
+            entity: player_entity,
+            data: client_state,
+            ..
+        } = self.world.uuid_map.get_mut(&self.player_uuid).unwrap();
+        tick(player_entity, client_state, self.cur_tick);
+
         self.world.step();
 
         clear_canvas();
         for (
-            _,
+            id,
             EntityHandles {
                 entity,
                 body_handle,
@@ -209,7 +226,11 @@ impl GameState {
             },
         ) in &mut self.world.uuid_map
         {
-            tick(entity, client_state, self.cur_tick);
+            // We already handled the user entity separately
+            if *id != self.player_uuid {
+                tick(entity, client_state, self.cur_tick);
+            }
+
             let pos = match self.world.world.rigid_body(*body_handle) {
                 Some(body) => body.position(),
                 None => *self

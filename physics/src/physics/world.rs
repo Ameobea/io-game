@@ -94,15 +94,16 @@ impl ForceGenerator<f32> for PlayerMovementForceGenerator {
     }
 }
 
-/// Interpolates between the two points with the given mix.  If `weight` is 0.0, `pt1` will be
-/// returned.  If it is 1.0, `pt2` will be returned.  `0.5` represents an even average between
-/// the two points.
-fn interpolate(pt1: Point2<f32>, pt2: Point2<f32>, weight: f32) -> Point2<f32> {
-    assert!(weight >= 0.0 && weight <= 1.0);
-    let x = (mix * pt1.x) + ((1.0 - mix) * pt2.x);
-    let y = (mix * pt2.y) + ((1.0 - mix) * pt2.y);
+/// Interpolates between the two positions with the given mix.  If `mix` is 0.0, `pos1` will be
+/// returned.  If it is 1.0, `pos2` will be returned.  `0.5` represents an even average between
+/// the two positions.
+fn interpolate(pos1: &Isometry2<f32>, pos2: &Isometry2<f32>, mix: f32) -> Isometry2<f32> {
+    assert!(mix >= 0.0 && mix <= 1.0);
+    let x = (mix * pos1.translation.vector.x) + ((1.0 - mix) * pos2.translation.vector.x);
+    let y = (mix * pos2.translation.vector.y) + ((1.0 - mix) * pos2.translation.vector.y);
+    let rotation = (mix * pos1.rotation.angle()) + ((1.0 - mix) * pos2.rotation.angle());
 
-    Point2::new(x, y)
+    Isometry2::new(Vector2::new(x, y), rotation)
 }
 
 impl<T> PhysicsWorldInner<T> {
@@ -297,15 +298,15 @@ impl<T> PhysicsWorldInner<T> {
             .rigid_body_mut(*body_handle)
             .expect(WORLD_MISSING_ERR);
 
-        let pos = if let Some(mix) = interpolation {
-            let old_pos = rigid_body.get_position();
-            interpolate(old_pos, pos, mix)
+        let interpolated_position = if let Some(mix) = interpolation {
+            let old_pos = rigid_body.position();
+            interpolate(&old_pos, pos, mix)
         } else {
-            pos
-        }
+            *pos
+        };
 
         rigid_body.set_velocity(*velocity);
-        rigid_body.set_position(*pos);
+        rigid_body.set_position(interpolated_position);
     }
 
     /// Removes all entities from this world
