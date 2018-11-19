@@ -37,4 +37,3 @@ TODO
 - Run `rustup default nightly` to make the nightly toolchain default.
 - Run `rustup target add wasm32-unknown-unknown --toolchain nightly` to add the WebAssembly target.
 - Run `cargo install wasm-bindgen-cli` to install the `wasm-bindgen-cli` which is used to generate JS wrapper code and TypeScript definitions from WebAssembly files.
-- Run `cargo install wasm-gc` to install the `wasm-gc` utility which is used to strip unused functions from wasm files.

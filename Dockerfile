@@ -21,9 +21,8 @@ RUN curl https://sh.rustup.rs/ -sSf | \
   sh -s -- -y --default-toolchain nightly-2018-10-15 && \
   PATH=$HOME/.cargo/bin:$PATH rustup target add wasm32-unknown-unknown --toolchain nightly-2018-10-15
 
-# Install wasm-bindgen and wasm-gc
+# Install wasm-bindgen
 RUN PATH=$HOME/.cargo/bin:$PATH cargo install wasm-bindgen-cli
-RUN PATH=$HOME/.cargo/bin:$PATH cargo install wasm-gc
 
 ADD . /app
 
