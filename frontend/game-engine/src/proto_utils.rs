@@ -3,7 +3,7 @@ use std::mem;
 use nalgebra::{Isometry2, Vector2};
 use native_physics::physics::Movement;
 use nphysics2d::algebra::Velocity2;
-use protobuf::{parse_from_bytes, Message};
+use protobuf::Message;
 use uuid::Uuid;
 
 use conf::CONF;
@@ -15,7 +15,7 @@ pub use protos::server_messages::ServerMessage_Payload_oneof_payload as ServerMe
 use protos::server_messages::{
     MovementUpdate, ServerMessage, ServerMessage_Payload as ServerMessagePayload,
 };
-use util::{error, warn};
+use util::warn;
 
 pub struct InnerServerMessage {
     pub id: Uuid,
@@ -105,21 +105,6 @@ pub fn parse_server_msg_payload(msg: ServerMessage) -> Vec<InnerServerMessage> {
         }
     }
     inner_messages
-}
-
-pub fn parse_server_message(bytes: &[u8]) -> Option<ServerMessage> {
-    let msg: ServerMessage = match parse_from_bytes(bytes) {
-        Ok(msg) => msg,
-        Err(err) => {
-            error(format!(
-                "Error parsing protobuf message from server: {:?}",
-                err
-            ));
-            return None;
-        }
-    };
-
-    Some(msg)
 }
 
 pub fn msg_to_bytes<M: Message>(msg: M) -> Vec<u8> {

@@ -15,7 +15,7 @@ use conf::CONF;
 use entity::{apply_update, parse_proto_entity, render, tick, ClientState, Entity, PlayerEntity};
 use proto_utils::{parse_server_msg_payload, InnerServerMessage, ServerMessageContent};
 use protos::server_messages::{
-    CreationEvent, ServerMessage, Snapshot, StatusUpdate, StatusUpdate_SimpleEvent as SimpleEvent,
+    CreationEvent, ServerMessage, Snapshot, StatusUpdate,
     StatusUpdate_oneof_payload as StatusPayload,
 };
 use render_effects::RenderEffectManager;
@@ -99,9 +99,11 @@ impl GameState {
                 Some(StatusPayload::creation_event(creation_evt)) => {
                     self.create_entity(entity_id, &creation_evt)
                 }
-                Some(StatusPayload::other(SimpleEvent::DELETION)) => {
+                // DELETION
+                Some(StatusPayload::other(0)) => {
                     self.world.remove_entity(&entity_id);
                 }
+                Some(StatusPayload::other(_)) => unimplemented!(),
                 None => warn("Received `StatusUpdate` with no payload"),
             },
             ServerMessageContent::snapshot(snapshot) => {

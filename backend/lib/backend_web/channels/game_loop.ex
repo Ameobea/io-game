@@ -139,7 +139,6 @@ defmodule BackendWeb.GameLoop do
   end
 
   defp start_tick() do
-    IO.puts("Start tick")
     Process.send_after(__MODULE__, :tick, 0)
   end
 end

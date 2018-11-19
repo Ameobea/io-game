@@ -1,7 +1,6 @@
 use conf::CONF;
 
 use std::collections::BTreeMap;
-use std::usize;
 
 use nalgebra::{Isometry2, Vector2};
 use nphysics2d::algebra::Velocity2;
@@ -168,6 +167,8 @@ impl<T> PhysicsWorldInner<T> {
             body_status,
         } = entity_data;
 
+        // `ShapeHandle` implements `AsRef<Shape>`, and `Shape` implements `Volumetric` which has the
+        // `inertia()` and `center_of_mass()` functions.  Yeah.
         let shape_handle = entity.get_shape_handle();
         let inertia = shape_handle.inertia(entity.get_density());
         let center_of_mass = shape_handle.center_of_mass();
@@ -236,16 +237,16 @@ impl<T> PhysicsWorldInner<T> {
         self.handle_map.remove(&collider_handle);
         self.world.remove_colliders(&[collider_handle]);
         self.world.remove_bodies(&[body_handle]);
-        // TODO: Possibly convert this to a map
-        let mut pos = usize::max_value();
-        for (i, (candidate_body_handle, uuid, _)) in self.user_handles.iter().enumerate() {
-            if (candidate_body_handle, uuid) == (&body_handle, entity_id) {
-                pos = i;
-                break;
-            }
-        }
-        if pos != usize::max_value() {
-            self.user_handles.swap_remove(pos);
+        // TODO: Convert this to a map
+        let pos =
+            self.user_handles
+                .iter()
+                .position(|(candidate_body_handle, uuid, _force_gen_key)| {
+                    body_handle == *candidate_body_handle && uuid == entity_id
+                });
+        if let Some(pos) = pos {
+            let (_, _, force_gen_key) = self.user_handles.swap_remove(pos);
+            self.world.remove_force_generator(force_gen_key);
         }
 
         if let Some(beam_handle) = beam_handle {

@@ -19,6 +19,10 @@ defmodule BackendWeb.GameState do
     GenServer.call(__MODULE__, {:track_player, topic, player_id, initial_state})
   end
 
+  def untrack_player(topic, player_id) do
+    GenServer.call(__MODULE__, {:untrack_player, topic, player_id})
+  end
+
   @spec update_topic(String.t(), (map -> map)) :: any()
   def update_topic(topic, update_fn) do
     GenServer.call(__MODULE__, {:update_topic, topic, update_fn})
@@ -51,6 +55,14 @@ defmodule BackendWeb.GameState do
 
   def handle_call({:track_player, topic, player_id, initial_state}, _from, {topics, tick, timestamp}) do
     new_topics = deep_merge(topics, %{topic => %{player_id => initial_state}})
+    {:reply, :ok, {new_topics, tick, timestamp}}
+  end
+
+  def handle_call({:untrack_player, topic, player_id}, _from, {topics, tick, timestamp}) do
+    # Remove the player from the topic map
+    new_topic = Map.delete(Map.get(topics, topic), player_id)
+    # Replace the topic map with the one that has the player removed from it
+    new_topics = Map.replace!(topics, topic, new_topic)
     {:reply, :ok, {new_topics, tick, timestamp}}
   end
 

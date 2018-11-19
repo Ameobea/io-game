@@ -39,6 +39,5 @@ module.exports = {
       minify: true,
       template: 'index.hbs',
     }),
-    new HtmlWebpackHarddiskPlugin(),
   ],
 };

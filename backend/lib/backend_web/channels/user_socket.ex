@@ -8,6 +8,7 @@ defmodule BackendWeb.UserSocket do
   transport(
     :websocket,
     Phoenix.Transports.WebSocket,
+    timeout: :infinity,
     serializer: [{BackendWeb.ProtoSerializer, "1.0.0"}],
     check_origin: [
       "//localhost:3699",
@@ -46,4 +47,8 @@ defmodule BackendWeb.UserSocket do
   #
   # Returning `nil` makes this socket anonymous.
   def id(_socket), do: nil
+
+  def terminate(reason, socket) do
+    IO.inspect([reason, socket])
+  end
 end

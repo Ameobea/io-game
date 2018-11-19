@@ -14,11 +14,8 @@ defmodule Backend.ProtoMessage do
     PlayerEntity,
     AsteroidEntity,
     BarrierEntity,
-    ServerMessage.Payload,
-    Point2,
   }
   alias NativePhysics
-  alias NativePhysics.MovementUpdate
 
   @entity_types %{
     player: PlayerEntity,

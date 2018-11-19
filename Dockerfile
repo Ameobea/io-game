@@ -18,8 +18,8 @@ RUN cmake . && make && make install
 
 # Install rust
 RUN curl https://sh.rustup.rs/ -sSf | \
-  sh -s -- -y --default-toolchain nightly && \
-  PATH=$HOME/.cargo/bin:$PATH rustup target add wasm32-unknown-unknown --toolchain nightly
+  sh -s -- -y --default-toolchain nightly-2018-10-15 && \
+  PATH=$HOME/.cargo/bin:$PATH rustup target add wasm32-unknown-unknown --toolchain nightly-2018-10-15
 
 # Install wasm-bindgen and wasm-gc
 RUN PATH=$HOME/.cargo/bin:$PATH cargo install wasm-bindgen-cli
@@ -31,8 +31,7 @@ WORKDIR /app/frontend
 
 # Build frontend and optimize emitted WebAssembly blob
 RUN yarn
-RUN PATH=$HOME/.cargo/bin:$PATH bash build_all.sh \
-  && bash opt.sh
+RUN PATH=$HOME/.cargo/bin:$PATH bash build_all.sh
 
 RUN cp /app/frontend/dist/* /app/backend/priv/static
 RUN cp /app/frontend/dist/index.html /app/backend/lib/backend_web/templates/page/index.html.eex

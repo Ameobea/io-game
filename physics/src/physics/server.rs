@@ -4,17 +4,13 @@ use nalgebra::{Isometry2, Point2, Vector2};
 use ncollide2d::events::ContactEvent;
 use ncollide2d::query::Proximity;
 use nphysics2d::algebra::Velocity2;
-use nphysics2d::object::{Body, BodyHandle, ColliderHandle, Material};
-use nphysics2d::volumetric::Volumetric;
+use nphysics2d::object::{Body, BodyHandle, BodyStatus, ColliderHandle};
 use rustler::error::Error as NifError;
 use rustler::{types::atom::Atom, Encoder, Env, NifResult, Term};
 
 use super::super::atoms;
-use super::entities::{
-    create_player_shape_handle, Entity, EntityHandles, PlayerEntity, BEAM_SHAPE_HANDLE,
-    DEFAULT_PLAYER_SIZE,
-};
-use super::world::{PhysicsWorldInner, PlayerMovementForceGenerator, COLLIDER_MARGIN};
+use super::entities::{Entity, EntityHandles, EntitySpawn, PlayerEntity, BEAM_SHAPE_HANDLE};
+use super::world::PhysicsWorldInner;
 use super::Movement;
 
 pub struct PhysicsWorld(Mutex<PhysicsWorldInner>);
@@ -443,61 +439,28 @@ pub fn tick<'a>(env: Env<'a>, update_all: bool, diffs: Vec<InternalUserDiff>) ->
 /// Adds a new user into the world with a given UUID, returning the location at which it was
 /// spawned in.  Returns `(center_of_mass_x, center_of_mass_y, MovementUpdate)`
 pub fn spawn_user(uuid: String) -> (f32, f32, MovementUpdate) {
-    let player_shape_handle = create_player_shape_handle(DEFAULT_PLAYER_SIZE);
     // TODO: decide where to spawn the user some better way
     let pos = Isometry2::new(Vector2::new(200.0, 200.0), 0.0);
 
-    // `ShapeHandle` implements `AsRef<Shape>`, and `Shape` implements `Volumetric` which has the
-    // `inertia()` and `center_of_mass()` functions.  Yeah.
-    let inertia = player_shape_handle.inertia(1.0);
-    let center_of_mass = player_shape_handle.center_of_mass();
+    let entity_spawn = EntitySpawn {
+        entity: Entity::Player(PlayerEntity::default()),
+        isometry: pos,
+        velocity: Velocity2::zero(),
+        data: (),
+        body_status: BodyStatus::Dynamic,
+    };
 
     let com = WORLD.apply(move |world| {
-        let &mut PhysicsWorldInner {
-            ref mut uuid_map,
-            ref mut handle_map,
-            ref mut world,
-            ref mut user_handles,
-            ref mut beam_sensors,
-        } = world;
-
-        // Add a rigid body and collision object into the world for the player
-        let body_handle = world.add_rigid_body(pos, inertia, center_of_mass);
-        let collider_handle = world.add_collider(
-            COLLIDER_MARGIN,
-            player_shape_handle,
-            body_handle,
-            Isometry2::identity(),
-            Material::default(),
+        world.spawn_entity(
+            uuid.parse().expect("Invalid player UUID provided!"),
+            entity_spawn,
         );
-
-        // Create a `Sensor` for the player's beam
-        let beam_handle = world.add_sensor(
-            BEAM_SHAPE_HANDLE.clone(),
-            body_handle,
-            Isometry2::identity(),
-        );
-
-        // Create a force generator for the user's movement input
-        let force_gen = PlayerMovementForceGenerator::new(body_handle, Movement::Stop);
-        let force_gen_handle = world.add_force_generator(force_gen);
-
-        // Insert an entry into the UUID map for the created player's internal handles
-        let handles = EntityHandles {
-            collider_handle,
-            body_handle,
-            beam_handle: Some(beam_handle),
-            entity: Entity::Player(PlayerEntity::default()),
-            data: (),
-        };
-        uuid_map.insert(uuid.clone(), handles);
-        // Also insert an entry into the reverse lookup map
-        handle_map.insert(collider_handle, uuid.clone());
-        beam_sensors.insert(beam_handle, uuid.clone());
-        // Add the handle to the `user_handles` cache
-        user_handles.push((body_handle, uuid, force_gen_handle));
-
-        world.rigid_body(body_handle).unwrap().center_of_mass()
+        let body_handle = world.uuid_map.get(&uuid).unwrap().body_handle;
+        world
+            .world
+            .rigid_body(body_handle)
+            .unwrap()
+            .center_of_mass()
     });
 
     let mvmt_update = MovementUpdate {
@@ -510,6 +473,10 @@ pub fn spawn_user(uuid: String) -> (f32, f32, MovementUpdate) {
     };
 
     (com.x, com.y, mvmt_update)
+}
+
+pub fn despawn_user(uuid: String) {
+    WORLD.apply(|world: &mut PhysicsWorldInner| world.remove_entity(&uuid))
 }
 
 #[derive(NifStruct)]

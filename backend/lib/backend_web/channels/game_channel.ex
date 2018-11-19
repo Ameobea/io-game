@@ -11,6 +11,7 @@ defmodule BackendWeb.GameChannel do
     StatusUpdate,
     CreationEvent,
     PlayerEntity,
+    StatusUpdate,
   }
   alias NativePhysics
 
@@ -40,6 +41,30 @@ defmodule BackendWeb.GameChannel do
       [connect_success_payload, snapshot_payload],
       assign(socket, :player_id, uuid)
     }
+  end
+
+  def terminate(_reason, socket) do
+    player_id = socket.assigns[:player_id]
+    # Delete the entitity from the physics world
+    NativePhysics.despawn_user player_id
+
+    # Delete entity from the Elixir-side game state
+    GameState.untrack_player(socket.topic, socket.assigns.player_id)
+
+    # Transmit deletion event for the entity
+    payload = ServerMessage.Payload.new(%{
+      id: ProtoMessage.to_proto_uuid(player_id),
+      payload: {
+        :status_update,
+        StatusUpdate.new(%{
+          payload: {
+            :other,
+            0, # DELETION
+          }
+        })
+      }
+    })
+    broadcast! socket, "game", %{response: [payload]}
   end
 
   def handle_info(:after_join, socket) do
@@ -82,6 +107,14 @@ defmodule BackendWeb.GameChannel do
   def handle_in("game", %ClientMessage{payload: payload}, socket) do
     handle_payload("game", payload, socket)
     {:noreply, socket}
+  end
+
+  def handle_in(other, payload, socket) do
+    IO.puts(["HANDLING OTHER EVT IN: ", other, payload, socket])
+  end
+
+  def handle_out(other, payload, socket) do
+    IO.puts(["HANDLING OTHER EVT OUT: ", other, payload, socket])
   end
 
   defp handle_payload("game", {:connect, %ConnectMessage{username: username}}, socket) do

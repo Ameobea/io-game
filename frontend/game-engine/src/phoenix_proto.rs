@@ -7,7 +7,7 @@ use protos::channel_messages::{
 };
 use protos::client_messages::{ClientMessage, ConnectMessage};
 use protos::server_messages::ServerMessage;
-use util::{error, warn};
+use util::{error, log, warn};
 
 use protobuf::{parse_from_bytes, Message};
 
@@ -63,6 +63,7 @@ fn warn_msg(msg_type: &str, topic: &str) {
 }
 
 pub fn handle_server_msg(bytes: &[u8]) {
+    log(format!("{:?}", bytes));
     let ServerChannelMessage {
         topic,
         event,

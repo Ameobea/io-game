@@ -26,13 +26,12 @@ message CreationEvent {
 }
 
 message StatusUpdate {
-  enum SimpleEvent {
-    DELETION = 0;
-  }
-
   oneof payload {
     CreationEvent creation_event = 1;
-    SimpleEvent other = 2;
+    // This is an enum, but enum decoding is bugged for the Rust client-side lib.
+    // Enum variants:
+    //  DELETION = 0
+    fixed32 other = 2;
   }
 }
 

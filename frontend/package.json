@@ -13,7 +13,7 @@
     "raw-loader": "^0.5.1",
     "ts-loader": "^4.4.2",
     "typescript": "^2.9.2",
-    "webpack": "git://github.com/xtuc/webpack.git#c9d6ec1ccbeee0c42b38649a2920f00e2b1148f7",
+    "webpack": "4.26.0",
     "webpack-cli": "^3.1.0",
     "webpack-dev-server": "^3.1.4"
   },

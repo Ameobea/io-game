@@ -1,4 +1,4 @@
-#![feature(extern_prelude, nll)]
+#![feature(nll)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -85,6 +85,7 @@ pub mod ext {
         "Elixir.NativePhysics",
         [
             ("spawn_user", 1, spawn_user),
+            ("despawn_user", 1, despawn_user),
             ("tick", 3, tick, SchedulerFlags::DirtyCpu),
             ("get_snapshot", 0, super::physics::server::get_snapshot)
         ],
@@ -148,7 +149,8 @@ pub mod ext {
                         Err(err) => Err(err),
                     }
                 },
-            ).collect::<NifResult<Vec<InternalUserDiff>>>()?;
+            )
+            .collect::<NifResult<Vec<InternalUserDiff>>>()?;
 
         let actions = super::physics::server::tick(env, update_all, diffs);
 
@@ -160,5 +162,12 @@ pub mod ext {
 
         let position = super::physics::server::spawn_user(uuid);
         Ok(position.encode(env))
+    }
+
+    pub fn despawn_user<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+        let uuid = args[0].decode()?;
+
+        super::physics::server::despawn_user(uuid);
+        Ok(().encode(env))
     }
 }
