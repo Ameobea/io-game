@@ -1,7 +1,10 @@
 frontend/dist
 backend/deps
+backend/_build
+backend/.elixir_ls
 physics/target
 frontend/game-engine/target
 Dockerfile
+.dockerignore
 frontend/node_modules
 config_loader/target

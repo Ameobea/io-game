@@ -18,8 +18,8 @@ RUN cmake . && make && make install
 
 # Install rust
 RUN curl https://sh.rustup.rs/ -sSf | \
-  sh -s -- -y --default-toolchain nightly-2018-10-15 && \
-  PATH=$HOME/.cargo/bin:$PATH rustup target add wasm32-unknown-unknown --toolchain nightly-2018-10-15
+  sh -s -- -y --default-toolchain nightly && \
+  PATH=$HOME/.cargo/bin:$PATH rustup target add wasm32-unknown-unknown --toolchain nightly
 
 # Install wasm-bindgen
 RUN PATH=$HOME/.cargo/bin:$PATH cargo install wasm-bindgen-cli
@@ -44,6 +44,8 @@ RUN mix phx.digest
 
 RUN ln -s $HOME/.cargo/bin/cargo /usr/local/bin/cargo
 RUN ln -s $HOME/.cargo/bin/rustc /usr/local/bin/rustc
+RUN /usr/local/bin/cargo --version
+RUN /usr/local/bin/rustc --version
 
 RUN mix compile
 

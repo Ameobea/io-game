@@ -48,7 +48,11 @@ defmodule Backend.Mixfile do
 
   defp rustler_crates do
     [
-      native_physics: [ path: "../physics" ]
+      native_physics: [
+        path: "../physics",
+        mode: (if Mix.env == :prod, do: :release, else: :debug),
+        default_features: true,
+      ]
     ]
   end
 end

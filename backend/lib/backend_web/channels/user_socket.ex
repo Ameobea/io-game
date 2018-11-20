@@ -13,6 +13,7 @@ defmodule BackendWeb.UserSocket do
     check_origin: [
       "//localhost:3699",
       "//localhost:8080",
+      "//localhost:4000",
       "//io.ameo.design",
       "//ameo.design",
       "//ameo.design:3699"

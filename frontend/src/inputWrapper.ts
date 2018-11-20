@@ -5,9 +5,10 @@
 import { getCanvas } from './renderMethods';
 import { continueInit, handleWsMsg, getEngine } from './index';
 
-const wsUrl = `ws://${window.location.hostname}${
-  window.location.hostname == 'localhost' ? ':4000' : ''
-}/socket/websocket?vsn=1.0.0`;
+const wsProtocol = window.location.protocol == 'https:' ? 'wss' : 'ws';
+const wsHostname =
+  window.location.hostname + (window.location.hostname == 'localhost' ? ':4000' : '');
+const wsUrl = `${wsProtocol}://${wsHostname}/socket/websocket?vsn=1.0.0`;
 const gameSocket = new WebSocket(wsUrl);
 
 gameSocket.binaryType = 'arraybuffer';
